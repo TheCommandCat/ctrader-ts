@@ -27,7 +27,10 @@
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "assets",
+    "README.md",
+    "LICENSE"
   ],
   "bin": {
     "ctrader-ts": "./dist/cli/index.js"
@@ -51,7 +54,6 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "private": true,
   "dependencies": {
     "@clack/prompts": "^1.0.1",
     "commander": "^14.0.3"
