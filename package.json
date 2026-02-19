@@ -1,0 +1,59 @@
+{
+  "name": "ctrader-ts",
+  "version": "0.1.0",
+  "description": "Unofficial community TypeScript client for the cTrader Open API — full protocol coverage, type-safe, agent-friendly",
+  "keywords": [
+    "ctrader",
+    "ctrader-api",
+    "ctrader-open-api",
+    "spotware",
+    "trading",
+    "forex",
+    "websocket"
+  ],
+  "homepage": "https://github.com/thecommandcat/ctrader-ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thecommandcat/ctrader-ts"
+  },
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "ctrader-ts": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x dist/cli/index.js dist/bin/auth.js",
+    "dev": "tsc --watch",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "bunx biome check src/ bin/ cli/",
+    "lint:fix": "bunx biome check --write src/ bin/ cli/",
+    "auth": "node dist/bin/auth.js",
+    "prepublishOnly": "bun run build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.2",
+    "@types/bun": "latest",
+    "@types/node": "latest",
+    "typescript": "^5.8.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "private": true,
+  "dependencies": {
+    "@clack/prompts": "^1.0.1",
+    "commander": "^14.0.3"
+  }
+}
