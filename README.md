@@ -34,18 +34,18 @@ No manual auth flows, no volume unit conversions, no raw WebSocket management.
 
 ## 🚀 Getting started
 
-**Clone & link globally** (recommended — gets you the CLI too):
+**Install from npm:**
+
+```bash
+npm install ctrader-ts
+```
+
+**Or clone & link globally** (gets you the CLI too):
 
 ```bash
 git clone https://github.com/thecommandcat/ctrader-ts
 cd ctrader-ts
 npm install && npm run build && npm link
-```
-
-**Or install as a library:**
-
-```bash
-npm install ctrader-ts
 ```
 
 ### 🔐 Authenticate
