@@ -82,7 +82,7 @@ export class CTraderConnection {
   }
 
   get isConnected(): boolean {
-    return this._state.status === "connected";
+    return this._state.status === "connected" || this._state.status === "ready";
   }
 
   connect(): Promise<void> {
@@ -371,12 +371,24 @@ export class CTraderConnection {
     const ws = new WebSocket(this.endpoint);
     this.ws = ws;
 
-    ws.addEventListener("open", () => {
+    ws.addEventListener("open", async () => {
       this.reconnectAttempt = 0;
-      this.setState({ status: "connected", since: Date.now() });
+      const since = Date.now();
+      this.setState({ status: "connected", since });
       this.startHeartbeat();
       if (this.hasConnectedOnce && this.onReconnect !== undefined) {
-        this.onReconnect().catch((e) => this.emit("error", e));
+        try {
+          await this.onReconnect();
+          // Only emit ready if we're still connected after onReconnect
+          if (this._state.status === "connected") {
+            this.setState({ status: "ready", since });
+          }
+        } catch (e) {
+          this.emit("error", e);
+        }
+      } else {
+        // Initial connect (no onReconnect) — immediately ready
+        this.setState({ status: "ready", since });
       }
     });
 
