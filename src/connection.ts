@@ -7,7 +7,21 @@ import type { ConnectionState, Envelope, OAErrorPayload } from "./types.js";
 import { PayloadType } from "./enums.js";
 
 const REQUEST_TIMEOUT_MS = 15_000;
-const HEARTBEAT_INTERVAL_MS = 25_000;
+/**
+ * How often (ms) to check whether we should send a heartbeat.
+ * The official Python SDK checks every 1 s.
+ */
+const HEARTBEAT_CHECK_MS = 1_000;
+/**
+ * Send a heartbeat if no message was sent for this many ms.
+ * cTrader docs: "send a heartbeat at least once every 10 seconds".
+ * The official Python SDK uses 20 s; we use the stricter 10 s.
+ */
+const HEARTBEAT_IDLE_MS = 10_000;
+/**
+ * Close the WebSocket if we haven't received a heartbeat from the server
+ * within this window.
+ */
 const HEARTBEAT_TIMEOUT_MS = 60_000;
 const INITIAL_RECONNECT_DELAY_MS = 2_000;
 const MAX_RECONNECT_DELAY_MS = 60_000;
@@ -47,6 +61,7 @@ export class CTraderConnection {
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
   private heartbeatCheckInterval: ReturnType<typeof setInterval> | null = null;
   private lastHeartbeatAt = 0;
+  private lastSendAt = 0;
 
   private readonly pending = new Map<string, PendingRequest>();
   private readonly payloadHandlers = new Map<number, Set<PayloadHandler>>();
@@ -147,10 +162,12 @@ export class CTraderConnection {
     }
 
     const clientMsgId = crypto.randomUUID();
-    const envelope: Envelope = payload !== undefined
-      ? { clientMsgId, payloadType, payload }
-      : { clientMsgId, payloadType };
+    const envelope: Envelope =
+      payload !== undefined
+        ? { clientMsgId, payloadType, payload }
+        : { clientMsgId, payloadType };
     this.ws.send(JSON.stringify(envelope));
+    this.lastSendAt = Date.now();
     return clientMsgId;
   }
 
@@ -163,7 +180,13 @@ export class CTraderConnection {
 
       const timeout = setTimeout(() => {
         this.pending.delete(clientMsgId);
-        reject(new RequestTimeoutError(payloadType, clientMsgId, this.requestTimeoutMs));
+        reject(
+          new RequestTimeoutError(
+            payloadType,
+            clientMsgId,
+            this.requestTimeoutMs,
+          ),
+        );
       }, this.requestTimeoutMs);
 
       this.pending.set(clientMsgId, { resolve, reject, timeout });
@@ -215,6 +238,9 @@ export class CTraderConnection {
 
     if (payloadType === PayloadType.HEARTBEAT_EVENT) {
       this.lastHeartbeatAt = Date.now();
+      // Respond immediately — the official SDK echoes every server heartbeat
+      // back as a pong. Without this the server considers us dead.
+      this.sendHeartbeat();
       return;
     }
 
@@ -257,22 +283,43 @@ export class CTraderConnection {
     }
   }
 
+  /**
+   * Send a bare heartbeat frame (no clientMsgId).
+   * Mirrors the Python SDK's `self.send(ProtoHeartbeatEvent(), True)`.
+   */
+  private sendHeartbeat(): void {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      const envelope: Envelope = { payloadType: PayloadType.HEARTBEAT_EVENT };
+      this.ws.send(JSON.stringify(envelope));
+      this.lastSendAt = Date.now();
+    }
+  }
+
   private startHeartbeat(): void {
     this.stopHeartbeat();
-    this.lastHeartbeatAt = Date.now();
+    const now = Date.now();
+    this.lastHeartbeatAt = now;
+    this.lastSendAt = now;
 
+    // Idle-based heartbeat: check every HEARTBEAT_CHECK_MS, send if we
+    // haven't sent anything for HEARTBEAT_IDLE_MS.  This matches the
+    // official Python SDK's `_sendStrings` loop which checks every 1 s
+    // and sends a heartbeat when idle for >20 s.
     this.heartbeatInterval = setInterval(() => {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        const envelope: Envelope = { payloadType: PayloadType.HEARTBEAT_EVENT };
-        this.ws.send(JSON.stringify(envelope));
+      if (
+        this.ws?.readyState === WebSocket.OPEN &&
+        Date.now() - this.lastSendAt >= HEARTBEAT_IDLE_MS
+      ) {
+        this.sendHeartbeat();
       }
-    }, HEARTBEAT_INTERVAL_MS);
+    }, HEARTBEAT_CHECK_MS);
 
+    // Liveness check: close if we haven't heard from the server
     this.heartbeatCheckInterval = setInterval(() => {
       if (Date.now() - this.lastHeartbeatAt > HEARTBEAT_TIMEOUT_MS) {
         this.ws?.close();
       }
-    }, 10_000);
+    }, HEARTBEAT_CHECK_MS);
   }
 
   private stopHeartbeat(): void {
@@ -325,6 +372,7 @@ export class CTraderConnection {
     this.ws = ws;
 
     ws.addEventListener("open", () => {
+      this.reconnectAttempt = 0;
       this.setState({ status: "connected", since: Date.now() });
       this.startHeartbeat();
       if (this.hasConnectedOnce && this.onReconnect !== undefined) {
@@ -362,12 +410,18 @@ export class CTraderConnection {
   }
 
   private makeError(err: OAErrorPayload | undefined): CTraderError {
-    const opts: { code: string; description: string; retryAfter?: number; maintenanceEndTimestamp?: number } = {
+    const opts: {
+      code: string;
+      description: string;
+      retryAfter?: number;
+      maintenanceEndTimestamp?: number;
+    } = {
       code: err?.errorCode ?? "UNKNOWN",
       description: err?.description ?? "Unknown error",
     };
     if (err?.retryAfter !== undefined) opts.retryAfter = err.retryAfter;
-    if (err?.maintenanceEndTimestamp !== undefined) opts.maintenanceEndTimestamp = err.maintenanceEndTimestamp;
+    if (err?.maintenanceEndTimestamp !== undefined)
+      opts.maintenanceEndTimestamp = err.maintenanceEndTimestamp;
     return new CTraderError(opts);
   }
 
