@@ -262,13 +262,18 @@ export class CTraderConnection {
   }
 
   private handleMessage(msg: DecodedMessage): void {
+    // Any incoming message proves the connection is alive — reset the
+    // heartbeat liveness timer so we don't kill a healthy connection
+    // that's busy sending spot/execution events but hasn't sent an
+    // explicit heartbeat recently.
+    this.lastHeartbeatAt = Date.now();
+
     this.emit("message", msg);
 
     const { clientMsgId, payloadType, payload } = msg;
 
     // Heartbeat: echo back immediately (matching official Python SDK)
     if (payloadType === PayloadType.HEARTBEAT_EVENT) {
-      this.lastHeartbeatAt = Date.now();
       this.sendHeartbeat();
       return;
     }
