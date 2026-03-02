@@ -32,6 +32,14 @@ const HEARTBEAT_TIMEOUT_MS = 60_000;
 const INITIAL_RECONNECT_DELAY_MS = 2_000;
 const MAX_RECONNECT_DELAY_MS = 60_000;
 
+/**
+ * Throttle settings to avoid REQUEST_FREQUENCY_EXCEEDED errors.
+ * The cTrader Open API has an undocumented rate limit (~50 req/s).
+ * We limit concurrency and add a small gap between sends.
+ */
+const MAX_CONCURRENT_REQUESTS = 5;
+const REQUEST_GAP_MS = 50;
+
 interface PendingRequest {
   resolve: (payload: Record<string, unknown>) => void;
   reject: (error: Error) => void;
@@ -82,6 +90,11 @@ export class CTraderConnection {
     ConnectionEvent,
     Set<ConnectionEventHandler>
   >();
+
+  /** Request throttle queue */
+  private readonly requestQueue: Array<() => void> = [];
+  private inFlightRequests = 0;
+  private lastRequestSentAt = 0;
 
   constructor(config: CTraderConnectionConfig) {
     this.host = config.host;
@@ -192,21 +205,78 @@ export class CTraderConnection {
     payload: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
     return new Promise<Record<string, unknown>>((resolve, reject) => {
-      const clientMsgId = this.send(payloadType, payload);
+      const execute = () => {
+        this.inFlightRequests++;
+        this.lastRequestSentAt = Date.now();
 
-      const timeout = setTimeout(() => {
-        this.pending.delete(clientMsgId);
-        reject(
-          new RequestTimeoutError(
-            payloadType,
-            clientMsgId,
-            this.requestTimeoutMs,
-          ),
-        );
-      }, this.requestTimeoutMs);
+        let clientMsgId: string;
+        try {
+          clientMsgId = this.send(payloadType, payload);
+        } catch (err) {
+          this.inFlightRequests--;
+          this.drainQueue();
+          reject(err instanceof Error ? err : new Error(String(err)));
+          return;
+        }
 
-      this.pending.set(clientMsgId, { resolve, reject, timeout });
+        const onComplete = () => {
+          this.inFlightRequests--;
+          this.drainQueue();
+        };
+
+        const timeout = setTimeout(() => {
+          this.pending.delete(clientMsgId);
+          onComplete();
+          reject(
+            new RequestTimeoutError(
+              payloadType,
+              clientMsgId,
+              this.requestTimeoutMs,
+            ),
+          );
+        }, this.requestTimeoutMs);
+
+        this.pending.set(clientMsgId, {
+          resolve: (result) => {
+            onComplete();
+            resolve(result);
+          },
+          reject: (err) => {
+            onComplete();
+            reject(err);
+          },
+          timeout,
+        });
+      };
+
+      // Queue if at concurrency limit or need gap between sends
+      if (this.inFlightRequests >= MAX_CONCURRENT_REQUESTS) {
+        this.requestQueue.push(execute);
+      } else {
+        const elapsed = Date.now() - this.lastRequestSentAt;
+        if (elapsed < REQUEST_GAP_MS) {
+          setTimeout(execute, REQUEST_GAP_MS - elapsed);
+        } else {
+          execute();
+        }
+      }
     });
+  }
+
+  private drainQueue(): void {
+    if (
+      this.requestQueue.length === 0 ||
+      this.inFlightRequests >= MAX_CONCURRENT_REQUESTS
+    ) {
+      return;
+    }
+    const next = this.requestQueue.shift()!;
+    const elapsed = Date.now() - this.lastRequestSentAt;
+    if (elapsed < REQUEST_GAP_MS) {
+      setTimeout(next, REQUEST_GAP_MS - elapsed);
+    } else {
+      next();
+    }
   }
 
   // ─── Event handlers ─────────────────────────────────────────────────────
@@ -457,6 +527,17 @@ export class CTraderConnection {
       req.reject(error);
     }
     this.pending.clear();
+    // Reset throttle state — all in-flight requests are now dead
+    this.inFlightRequests = 0;
+    // Reject queued requests too — they'll fail on a dead socket
+    const queued = this.requestQueue.splice(0);
+    for (const fn of queued) {
+      try {
+        fn();
+      } catch {
+        // Will throw NotConnectedError — caught by caller
+      }
+    }
   }
 
   private makeError(err: OAErrorPayload | undefined): CTraderError {
