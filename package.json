@@ -1,6 +1,6 @@
 {
   "name": "ctrader-ts",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Unofficial community TypeScript client for the cTrader Open API — full protocol coverage, type-safe, agent-friendly",
   "keywords": [
     "ctrader",
@@ -36,7 +36,7 @@
     "ctrader-ts": "./dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsc && chmod +x dist/cli/index.js dist/bin/auth.js",
+    "build": "tsc && cp -r src/proto dist/src/proto && chmod +x dist/cli/index.js dist/bin/auth.js",
     "dev": "tsc --watch",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
