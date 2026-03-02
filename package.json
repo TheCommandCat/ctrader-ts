@@ -1,6 +1,6 @@
 {
   "name": "ctrader-ts",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Unofficial community TypeScript client for the cTrader Open API — full protocol coverage, type-safe, agent-friendly",
   "keywords": [
     "ctrader",

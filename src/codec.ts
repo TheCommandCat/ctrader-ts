@@ -128,6 +128,49 @@ export function encodeHeartbeat(): Buffer {
 }
 
 // ---------------------------------------------------------------------------
+// Long → number conversion
+// ---------------------------------------------------------------------------
+
+/**
+ * Detect a protobufjs Long object (has low/high/unsigned properties).
+ */
+function isLong(
+  value: unknown,
+): value is {
+  low: number;
+  high: number;
+  unsigned: boolean;
+  toNumber(): number;
+} {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "low" in (value as Record<string, unknown>) &&
+    "high" in (value as Record<string, unknown>) &&
+    "unsigned" in (value as Record<string, unknown>)
+  );
+}
+
+/**
+ * Recursively convert all Long objects in a decoded protobuf payload to plain
+ * JS numbers. This is necessary because protobufjs represents int64/uint64
+ * fields as Long objects, but cTrader values always fit in JS safe integers.
+ */
+function convertLongs(obj: unknown): unknown {
+  if (isLong(obj)) return obj.toNumber();
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map(convertLongs);
+  if (typeof obj === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      result[key] = convertLongs(value);
+    }
+    return result;
+  }
+  return obj;
+}
+
+// ---------------------------------------------------------------------------
 // Decode
 // ---------------------------------------------------------------------------
 
@@ -149,7 +192,10 @@ export function decodeMessage(data: Uint8Array): DecodedMessage {
   if (envelope.payload && envelope.payload.length > 0) {
     const msgClass = registry.get(payloadType);
     if (msgClass) {
-      payload = msgClass.decode(envelope.payload) as Record<string, unknown>;
+      payload = convertLongs(msgClass.decode(envelope.payload)) as Record<
+        string,
+        unknown
+      >;
     }
   }
 
