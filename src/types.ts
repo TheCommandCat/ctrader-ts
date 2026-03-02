@@ -24,12 +24,6 @@ import type {
   TrendbarPeriod,
 } from "./enums.js";
 
-export interface Envelope {
-  clientMsgId?: string;
-  payloadType: number;
-  payload?: Record<string, unknown>;
-}
-
 export type ConnectionState =
   | { status: "disconnected" }
   | { status: "connecting"; attempt: number }

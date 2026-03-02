@@ -59,6 +59,7 @@ export {
   RequestTimeoutError,
   NotConnectedError,
 } from "./errors.js";
+export { type DecodedMessage, getMessageClass } from "./codec.js";
 export {
   PayloadType,
   ProtoErrorCode,
@@ -90,7 +91,6 @@ export {
   ChangeBalanceType,
 } from "./enums.js";
 export type {
-  Envelope,
   ConnectionState,
   Asset,
   AssetClass,

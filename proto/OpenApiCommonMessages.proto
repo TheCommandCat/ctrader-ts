@@ -1,0 +1,25 @@
+syntax = "proto2";
+
+import "OpenApiCommonModelMessages.proto";
+
+option java_package = "com.xtrader.protocol.proto.commons";
+option java_outer_classname = "ContainerCommonMessages";
+option java_multiple_files = true;
+option optimize_for = SPEED;
+
+message ProtoMessage {
+    required uint32 payloadType = 1;
+    optional bytes payload = 2;
+    optional string clientMsgId = 3;
+}
+
+message ProtoErrorRes {
+    optional ProtoPayloadType payloadType = 1 [default = ERROR_RES];
+    required string errorCode = 2;
+    optional string description = 3;
+    optional uint64 maintenanceEndTimestamp = 4;
+}
+
+message ProtoHeartbeatEvent {
+    optional ProtoPayloadType payloadType = 1 [default = HEARTBEAT_EVENT];
+}

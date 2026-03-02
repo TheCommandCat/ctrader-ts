@@ -1,0 +1,676 @@
+syntax = "proto2";
+
+import "OpenApiModelMessages.proto";
+
+option java_package = "com.xtrader.protocol.openapi.v2";
+option java_outer_classname = "ContainerOpenApiV2Messages";
+option java_multiple_files = true;
+option optimize_for = SPEED;
+
+// Application authorization
+
+message ProtoOAApplicationAuthReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_APPLICATION_AUTH_REQ];
+    required string clientId = 2;
+    required string clientSecret = 3;
+}
+
+message ProtoOAApplicationAuthRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_APPLICATION_AUTH_RES];
+}
+
+// Account authorization
+
+message ProtoOAAccountAuthReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ACCOUNT_AUTH_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required string accessToken = 3;
+}
+
+message ProtoOAAccountAuthRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ACCOUNT_AUTH_RES];
+    required int64 ctidTraderAccountId = 2;
+}
+
+// Error handling
+
+message ProtoOAErrorRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ERROR_RES];
+    optional int64 ctidTraderAccountId = 2;
+    required string errorCode = 3;
+    optional string description = 4;
+    optional int64 maintenanceEndTimestamp = 5;
+}
+
+// Client/account events
+
+message ProtoOAClientDisconnectEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_CLIENT_DISCONNECT_EVENT];
+    optional string reason = 2;
+}
+
+message ProtoOAAccountsTokenInvalidatedEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ACCOUNTS_TOKEN_INVALIDATED_EVENT];
+    repeated int64 ctidTraderAccountIds = 2;
+    optional string reason = 3;
+}
+
+// Version
+
+message ProtoOAVersionReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_VERSION_REQ];
+}
+
+message ProtoOAVersionRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_VERSION_RES];
+    required string version = 2;
+}
+
+// Order management
+
+message ProtoOANewOrderReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_NEW_ORDER_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 symbolId = 3;
+    required ProtoOAOrderType orderType = 4;
+    required ProtoOATradeSide tradeSide = 5;
+    required int64 volume = 6;
+    optional double limitPrice = 7;
+    optional double stopPrice = 8;
+    optional ProtoOATimeInForce timeInForce = 9 [default = GOOD_TILL_CANCEL];
+    optional int64 expirationTimestamp = 10;
+    optional double stopLoss = 11;
+    optional double takeProfit = 12;
+    optional string comment = 13;
+    optional double baseSlippagePrice = 14;
+    optional int32 slippageInPoints = 15;
+    optional string label = 16;
+    optional int64 positionId = 17;
+    optional string clientOrderId = 18;
+    optional int64 relativeStopLoss = 19;
+    optional int64 relativeTakeProfit = 20;
+    optional bool guaranteedStopLoss = 21;
+    optional bool trailingStopLoss = 22;
+    optional ProtoOAOrderTriggerMethod stopTriggerMethod = 23 [default = TRADE];
+}
+
+message ProtoOAExecutionEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_EXECUTION_EVENT];
+    required int64 ctidTraderAccountId = 2;
+    required ProtoOAExecutionType executionType = 3;
+    optional ProtoOAPosition position = 4;
+    optional ProtoOAOrder order = 5;
+    optional ProtoOADeal deal = 6;
+    optional ProtoOABonusDepositWithdraw bonusDepositWithdraw = 7;
+    optional ProtoOADepositWithdraw depositWithdraw = 8;
+    optional string errorCode = 9;
+    optional bool isServerEvent = 10;
+}
+
+message ProtoOACancelOrderReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_CANCEL_ORDER_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 orderId = 3;
+}
+
+message ProtoOAAmendOrderReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_AMEND_ORDER_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 orderId = 3;
+    optional int64 volume = 4;
+    optional double limitPrice = 5;
+    optional double stopPrice = 6;
+    optional int64 expirationTimestamp = 7;
+    optional double stopLoss = 8;
+    optional double takeProfit = 9;
+    optional int32 slippageInPoints = 10;
+    optional int64 relativeStopLoss = 11;
+    optional int64 relativeTakeProfit = 12;
+    optional bool guaranteedStopLoss = 13;
+    optional bool trailingStopLoss = 14;
+    optional ProtoOAOrderTriggerMethod stopTriggerMethod = 15 [default = TRADE];
+}
+
+message ProtoOAAmendPositionSLTPReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_AMEND_POSITION_SLTP_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 positionId = 3;
+    optional double stopLoss = 4;
+    optional double takeProfit = 5;
+    optional bool guaranteedStopLoss = 7;
+    optional bool trailingStopLoss = 8;
+    optional ProtoOAOrderTriggerMethod stopLossTriggerMethod = 9 [default = TRADE];
+}
+
+message ProtoOAClosePositionReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_CLOSE_POSITION_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 positionId = 3;
+    required int64 volume = 4;
+}
+
+message ProtoOATrailingSLChangedEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_TRAILING_SL_CHANGED_EVENT];
+    required int64 ctidTraderAccountId = 2;
+    required int64 positionId = 3;
+    required int64 orderId = 4;
+    required double stopPrice = 5;
+    required int64 utcLastUpdateTimestamp = 6;
+}
+
+// Asset lists
+
+message ProtoOAAssetListReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ASSET_LIST_REQ];
+    required int64 ctidTraderAccountId = 2;
+}
+
+message ProtoOAAssetListRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ASSET_LIST_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOAAsset asset = 3;
+}
+
+// Symbol lists
+
+message ProtoOASymbolsListReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SYMBOLS_LIST_REQ];
+    required int64 ctidTraderAccountId = 2;
+    optional bool includeArchivedSymbols = 3 [default = false];
+}
+
+message ProtoOASymbolsListRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SYMBOLS_LIST_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOALightSymbol symbol = 3;
+    repeated ProtoOAArchivedSymbol archivedSymbol = 4;
+}
+
+message ProtoOASymbolByIdReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SYMBOL_BY_ID_REQ];
+    required int64 ctidTraderAccountId = 2;
+    repeated int64 symbolId = 3;
+}
+
+message ProtoOASymbolByIdRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SYMBOL_BY_ID_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOASymbol symbol = 3;
+    repeated ProtoOAArchivedSymbol archivedSymbol = 4;
+}
+
+message ProtoOASymbolsForConversionReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SYMBOLS_FOR_CONVERSION_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 firstAssetId = 3;
+    required int64 lastAssetId = 4;
+}
+
+message ProtoOASymbolsForConversionRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SYMBOLS_FOR_CONVERSION_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOALightSymbol symbol = 3;
+}
+
+message ProtoOASymbolChangedEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SYMBOL_CHANGED_EVENT];
+    required int64 ctidTraderAccountId = 2;
+    repeated int64 symbolId = 3;
+}
+
+// Asset class lists
+
+message ProtoOAAssetClassListReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ASSET_CLASS_LIST_REQ];
+    required int64 ctidTraderAccountId = 2;
+}
+
+message ProtoOAAssetClassListRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ASSET_CLASS_LIST_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOAAssetClass assetClass = 3;
+}
+
+// Trader info
+
+message ProtoOATraderReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_TRADER_REQ];
+    required int64 ctidTraderAccountId = 2;
+}
+
+message ProtoOATraderRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_TRADER_RES];
+    required int64 ctidTraderAccountId = 2;
+    required ProtoOATrader trader = 3;
+}
+
+message ProtoOATraderUpdatedEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_TRADER_UPDATE_EVENT];
+    required int64 ctidTraderAccountId = 2;
+    required ProtoOATrader trader = 3;
+}
+
+// Reconcile
+
+message ProtoOAReconcileReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_RECONCILE_REQ];
+    required int64 ctidTraderAccountId = 2;
+}
+
+message ProtoOAReconcileRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_RECONCILE_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOAPosition position = 3;
+    repeated ProtoOAOrder order = 4;
+}
+
+// Order errors
+
+message ProtoOAOrderErrorEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ORDER_ERROR_EVENT];
+    required string errorCode = 2;
+    optional int64 orderId = 3;
+    required int64 ctidTraderAccountId = 5;
+    optional int64 positionId = 6;
+    optional string description = 7;
+}
+
+// Deal lists
+
+message ProtoOADealListReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_DEAL_LIST_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 fromTimestamp = 3;
+    required int64 toTimestamp = 4;
+    optional int32 maxRows = 5;
+}
+
+message ProtoOADealListRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_DEAL_LIST_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOADeal deal = 3;
+    required bool hasMore = 4;
+}
+
+// Order lists
+
+message ProtoOAOrderListReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ORDER_LIST_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 fromTimestamp = 3;
+    required int64 toTimestamp = 4;
+}
+
+message ProtoOAOrderListRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ORDER_LIST_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOAOrder order = 3;
+    required bool hasMore = 4;
+}
+
+// Expected margin
+
+message ProtoOAExpectedMarginReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_EXPECTED_MARGIN_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 symbolId = 3;
+    repeated int64 volume = 4;
+}
+
+message ProtoOAExpectedMarginRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_EXPECTED_MARGIN_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOAExpectedMargin margin = 3;
+    optional uint32 moneyDigits = 4;
+}
+
+message ProtoOAMarginChangedEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_MARGIN_CHANGED_EVENT];
+    required int64 ctidTraderAccountId = 2;
+    required uint64 positionId = 3;
+    required uint64 usedMargin = 4;
+    optional uint32 moneyDigits = 5;
+}
+
+// Cash flow history
+
+message ProtoOACashFlowHistoryListReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_CASH_FLOW_HISTORY_LIST_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 fromTimestamp = 3;
+    required int64 toTimestamp = 4;
+}
+
+message ProtoOACashFlowHistoryListRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_CASH_FLOW_HISTORY_LIST_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOADepositWithdraw depositWithdraw = 3;
+}
+
+// Account lists and tokens
+
+message ProtoOAGetAccountListByAccessTokenReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_REQ];
+    required string accessToken = 2;
+}
+
+message ProtoOAGetAccountListByAccessTokenRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_RES];
+    required string accessToken = 2;
+    optional ProtoOAClientPermissionScope permissionScope = 3;
+    repeated ProtoOACtidTraderAccount ctidTraderAccount = 4;
+}
+
+message ProtoOARefreshTokenReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_REFRESH_TOKEN_REQ];
+    required string refreshToken = 2;
+}
+
+message ProtoOARefreshTokenRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_REFRESH_TOKEN_RES];
+    required string accessToken = 2;
+    required string tokenType = 3;
+    required int64 expiresIn = 4;
+    required string refreshToken = 5;
+}
+
+// Spot subscriptions
+
+message ProtoOASubscribeSpotsReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SUBSCRIBE_SPOTS_REQ];
+    required int64 ctidTraderAccountId = 2;
+    repeated int64 symbolId = 3;
+    optional bool subscribeToSpotTimestamp = 4;
+}
+
+message ProtoOASubscribeSpotsRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SUBSCRIBE_SPOTS_RES];
+    required int64 ctidTraderAccountId = 2;
+}
+
+message ProtoOAUnsubscribeSpotsReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_UNSUBSCRIBE_SPOTS_REQ];
+    required int64 ctidTraderAccountId = 2;
+    repeated int64 symbolId = 3;
+}
+
+message ProtoOAUnsubscribeSpotsRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_UNSUBSCRIBE_SPOTS_RES];
+    required int64 ctidTraderAccountId = 2;
+}
+
+message ProtoOASpotEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SPOT_EVENT];
+    required int64 ctidTraderAccountId = 2;
+    required int64 symbolId = 3;
+    optional uint64 bid = 4;
+    optional uint64 ask = 5;
+    repeated ProtoOATrendbar trendbar = 6;
+    optional uint64 sessionClose = 7;
+    optional int64 timestamp = 8;
+}
+
+// Live trendbar subscriptions
+
+message ProtoOASubscribeLiveTrendbarReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SUBSCRIBE_LIVE_TRENDBAR_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required ProtoOATrendbarPeriod period = 3;
+    required int64 symbolId = 4;
+}
+
+message ProtoOASubscribeLiveTrendbarRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SUBSCRIBE_LIVE_TRENDBAR_RES];
+    required int64 ctidTraderAccountId = 2;
+}
+
+message ProtoOAUnsubscribeLiveTrendbarReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_UNSUBSCRIBE_LIVE_TRENDBAR_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required ProtoOATrendbarPeriod period = 3;
+    required int64 symbolId = 4;
+}
+
+message ProtoOAUnsubscribeLiveTrendbarRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_UNSUBSCRIBE_LIVE_TRENDBAR_RES];
+    required int64 ctidTraderAccountId = 2;
+}
+
+// Trendbar data
+
+message ProtoOAGetTrendbarsReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_GET_TRENDBARS_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 fromTimestamp = 3;
+    required int64 toTimestamp = 4;
+    required ProtoOATrendbarPeriod period = 5;
+    required int64 symbolId = 6;
+    optional uint32 count = 7;
+}
+
+message ProtoOAGetTrendbarsRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_GET_TRENDBARS_RES];
+    required int64 ctidTraderAccountId = 2;
+    required ProtoOATrendbarPeriod period = 3;
+    required int64 timestamp = 4;
+    repeated ProtoOATrendbar trendbar = 5;
+    optional int64 symbolId = 6;
+}
+
+// Tick data
+
+message ProtoOAGetTickDataReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_GET_TICKDATA_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 symbolId = 3;
+    required ProtoOAQuoteType type = 4;
+    required int64 fromTimestamp = 5;
+    required int64 toTimestamp = 6;
+}
+
+message ProtoOAGetTickDataRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_GET_TICKDATA_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOATickData tickData = 3;
+    required bool hasMore = 4;
+}
+
+// cTID profile
+
+message ProtoOAGetCtidProfileByTokenReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_GET_CTID_PROFILE_BY_TOKEN_REQ];
+    required string accessToken = 2;
+}
+
+message ProtoOAGetCtidProfileByTokenRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_GET_CTID_PROFILE_BY_TOKEN_RES];
+    required ProtoOACtidProfile profile = 2;
+}
+
+// Depth of market
+
+message ProtoOADepthEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_DEPTH_EVENT];
+    required int64 ctidTraderAccountId = 2;
+    required uint64 symbolId = 3;
+    repeated ProtoOADepthQuote newQuotes = 4;
+    repeated uint64 deletedQuotes = 5 [packed = true];
+}
+
+message ProtoOASubscribeDepthQuotesReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SUBSCRIBE_DEPTH_QUOTES_REQ];
+    required int64 ctidTraderAccountId = 2;
+    repeated int64 symbolId = 3;
+}
+
+message ProtoOASubscribeDepthQuotesRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SUBSCRIBE_DEPTH_QUOTES_RES];
+    required int64 ctidTraderAccountId = 2;
+}
+
+message ProtoOAUnsubscribeDepthQuotesReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_UNSUBSCRIBE_DEPTH_QUOTES_REQ];
+    required int64 ctidTraderAccountId = 2;
+    repeated int64 symbolId = 3;
+}
+
+message ProtoOAUnsubscribeDepthQuotesRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_UNSUBSCRIBE_DEPTH_QUOTES_RES];
+    required int64 ctidTraderAccountId = 2;
+}
+
+// Symbol category lists
+
+message ProtoOASymbolCategoryListReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SYMBOL_CATEGORY_REQ];
+    required int64 ctidTraderAccountId = 2;
+}
+
+message ProtoOASymbolCategoryListRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_SYMBOL_CATEGORY_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOASymbolCategory symbolCategory = 3;
+}
+
+// Account logout
+
+message ProtoOAAccountLogoutReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ACCOUNT_LOGOUT_REQ];
+    required int64 ctidTraderAccountId = 2;
+}
+
+message ProtoOAAccountLogoutRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ACCOUNT_LOGOUT_RES];
+    required int64 ctidTraderAccountId = 2;
+}
+
+message ProtoOAAccountDisconnectEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ACCOUNT_DISCONNECT_EVENT];
+    required int64 ctidTraderAccountId = 2;
+}
+
+// Margin call
+
+message ProtoOAMarginCallListReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_MARGIN_CALL_LIST_REQ];
+    required int64 ctidTraderAccountId = 2;
+}
+
+message ProtoOAMarginCallListRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_MARGIN_CALL_LIST_RES];
+    repeated ProtoOAMarginCall marginCall = 2;
+}
+
+message ProtoOAMarginCallUpdateReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_MARGIN_CALL_UPDATE_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required ProtoOAMarginCall marginCall = 3;
+}
+
+message ProtoOAMarginCallUpdateRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_MARGIN_CALL_UPDATE_RES];
+}
+
+message ProtoOAMarginCallUpdateEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_MARGIN_CALL_UPDATE_EVENT];
+    required int64 ctidTraderAccountId = 2;
+    required ProtoOAMarginCall marginCall = 3;
+}
+
+message ProtoOAMarginCallTriggerEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_MARGIN_CALL_TRIGGER_EVENT];
+    required int64 ctidTraderAccountId = 2;
+    required ProtoOAMarginCall marginCall = 3;
+}
+
+// Dynamic leverage
+
+message ProtoOAGetDynamicLeverageByIDReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_GET_DYNAMIC_LEVERAGE_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 leverageId = 3;
+}
+
+message ProtoOAGetDynamicLeverageByIDRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_GET_DYNAMIC_LEVERAGE_RES];
+    required int64 ctidTraderAccountId = 2;
+    required ProtoOADynamicLeverage leverage = 3;
+}
+
+// Deal list by position
+
+message ProtoOADealListByPositionIdReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_DEAL_LIST_BY_POSITION_ID_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 positionId = 3;
+    required int64 fromTimestamp = 4;
+    required int64 toTimestamp = 5;
+}
+
+message ProtoOADealListByPositionIdRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_DEAL_LIST_BY_POSITION_ID_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOADeal deal = 3;
+    optional int64 hasMore = 4;
+}
+
+// Deal offset
+
+message ProtoOADealOffsetListReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_DEAL_OFFSET_LIST_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 dealId = 3;
+}
+
+message ProtoOADealOffsetListRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_DEAL_OFFSET_LIST_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOADealOffset offsetBy = 3;
+    repeated ProtoOADealOffset offsetting = 4;
+}
+
+// Unrealized PnL
+
+message ProtoOAGetPositionUnrealizedPnLReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_GET_POSITION_UNREALIZED_PNL_REQ];
+    required int64 ctidTraderAccountId = 2;
+}
+
+message ProtoOAGetPositionUnrealizedPnLRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_GET_POSITION_UNREALIZED_PNL_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOAPositionUnrealizedPnL positionUnrealizedPnL = 3;
+    required uint32 moneyDigits = 4;
+}
+
+// Order details
+
+message ProtoOAOrderDetailsReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ORDER_DETAILS_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 orderId = 3;
+}
+
+message ProtoOAOrderDetailsRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ORDER_DETAILS_RES];
+    required int64 ctidTraderAccountId = 2;
+    required ProtoOAOrder order = 3;
+    repeated ProtoOADeal deal = 4;
+}
+
+// Order list by position
+
+message ProtoOAOrderListByPositionIdReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ORDER_LIST_BY_POSITION_ID_REQ];
+    required int64 ctidTraderAccountId = 2;
+    required int64 positionId = 3;
+    optional int64 fromTimestamp = 4;
+    optional int64 toTimestamp = 5;
+}
+
+message ProtoOAOrderListByPositionIdRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = PROTO_OA_ORDER_LIST_BY_POSITION_ID_RES];
+    required int64 ctidTraderAccountId = 2;
+    repeated ProtoOAOrder order = 3;
+    required bool hasMore = 4;
+}

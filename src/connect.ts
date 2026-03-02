@@ -1,14 +1,19 @@
 import {
   resolveConfig,
-  endpointForEnvironment,
+  hostForEnvironment,
+  API_PORT,
   type PartialConfig,
-  DEMO_ENDPOINT,
-  LIVE_ENDPOINT,
+  DEMO_HOST,
+  LIVE_HOST,
 } from "./config.js";
 import { CTrader } from "./client.js";
 import { CTraderError } from "./errors.js";
 
-export { DEMO_ENDPOINT, LIVE_ENDPOINT };
+export { DEMO_HOST, LIVE_HOST, API_PORT };
+/** @deprecated Use DEMO_HOST */
+export const DEMO_ENDPOINT = DEMO_HOST;
+/** @deprecated Use LIVE_HOST */
+export const LIVE_ENDPOINT = LIVE_HOST;
 
 export interface ConnectOptions extends PartialConfig {
   /**
@@ -60,14 +65,15 @@ export interface ConnectOptions extends PartialConfig {
 export async function connect(overrides?: ConnectOptions): Promise<CTrader> {
   const { getAccessToken, ...configOverrides } = overrides ?? {};
   const config = resolveConfig(configOverrides);
-  const endpoint = endpointForEnvironment(config.environment);
+  const host = hostForEnvironment(config.environment);
 
   // Track the current access token in a mutable variable so reconnects
   // always use the latest token (whether refreshed or original).
   let currentAccessToken = config.accessToken;
 
   const client = new CTrader({
-    endpoint,
+    host,
+    port: API_PORT,
     accountId: config.accountId,
     onReconnect: async () => {
       await client.raw.auth.authenticateApp(

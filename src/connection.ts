@@ -1,27 +1,33 @@
+/**
+ * TLS/TCP connection to cTrader Open API (port 5035).
+ *
+ * Wire format (matching the official Python SDK):
+ *   [4-byte big-endian length N][N bytes of serialized ProtoMessage]
+ *
+ * Heartbeat behaviour (matching the official Python SDK):
+ *   - If no message sent for HEARTBEAT_IDLE_MS, send a ProtoHeartbeatEvent
+ *   - When a heartbeat is received from the server, immediately echo one back
+ *   - If no heartbeat received from server for HEARTBEAT_TIMEOUT_MS, close
+ */
+
+import * as tls from "node:tls";
 import {
   CTraderError,
   NotConnectedError,
   RequestTimeoutError,
 } from "./errors.js";
-import type { ConnectionState, Envelope, OAErrorPayload } from "./types.js";
+import type { ConnectionState, OAErrorPayload } from "./types.js";
 import { PayloadType } from "./enums.js";
+import {
+  encodeMessage,
+  encodeHeartbeat,
+  decodeMessage,
+  type DecodedMessage,
+} from "./codec.js";
 
 const REQUEST_TIMEOUT_MS = 15_000;
-/**
- * How often (ms) to check whether we should send a heartbeat.
- * The official Python SDK checks every 1 s.
- */
 const HEARTBEAT_CHECK_MS = 1_000;
-/**
- * Send a heartbeat if no message was sent for this many ms.
- * cTrader docs: "send a heartbeat at least once every 10 seconds".
- * The official Python SDK uses 20 s; we use the stricter 10 s.
- */
 const HEARTBEAT_IDLE_MS = 10_000;
-/**
- * Close the WebSocket if we haven't received a heartbeat from the server
- * within this window.
- */
 const HEARTBEAT_TIMEOUT_MS = 60_000;
 const INITIAL_RECONNECT_DELAY_MS = 2_000;
 const MAX_RECONNECT_DELAY_MS = 60_000;
@@ -38,16 +44,20 @@ export type ConnectionEvent = "stateChange" | "error" | "message";
 type ConnectionEventHandler = (data: unknown) => void;
 
 export interface CTraderConnectionConfig {
-  endpoint: string;
+  /** Hostname, e.g. "demo.ctraderapi.com" */
+  host: string;
+  /** Port — default 5035 */
+  port?: number;
   maxReconnectAttempts?: number;
   requestTimeoutMs?: number;
-  /** Called after WebSocket reconnects (not initial connect). Use for re-auth + subscription restore. */
+  /** Called after TCP reconnects (not initial connect). Use for re-auth + subscription restore. */
   onReconnect?: () => Promise<void>;
 }
 
 export class CTraderConnection {
-  private ws: WebSocket | null = null;
-  private readonly endpoint: string;
+  private socket: tls.TLSSocket | null = null;
+  private readonly host: string;
+  private readonly port: number;
   private readonly maxReconnectAttempts: number;
   private readonly requestTimeoutMs: number;
   private readonly onReconnect: (() => Promise<void>) | undefined;
@@ -63,6 +73,9 @@ export class CTraderConnection {
   private lastHeartbeatAt = 0;
   private lastSendAt = 0;
 
+  /** Incoming data buffer for length-prefix framing */
+  private recvBuffer = Buffer.alloc(0);
+
   private readonly pending = new Map<string, PendingRequest>();
   private readonly payloadHandlers = new Map<number, Set<PayloadHandler>>();
   private readonly eventHandlers = new Map<
@@ -71,7 +84,8 @@ export class CTraderConnection {
   >();
 
   constructor(config: CTraderConnectionConfig) {
-    this.endpoint = config.endpoint;
+    this.host = config.host;
+    this.port = config.port ?? 5035;
     this.maxReconnectAttempts = config.maxReconnectAttempts ?? 0;
     this.requestTimeoutMs = config.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
     this.onReconnect = config.onReconnect;
@@ -85,9 +99,14 @@ export class CTraderConnection {
     return this._state.status === "connected" || this._state.status === "ready";
   }
 
+  // ─── Connect ────────────────────────────────────────────────────────────
+
   connect(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      if (this._state.status === "connected") {
+      if (
+        this._state.status === "connected" ||
+        this._state.status === "ready"
+      ) {
         resolve();
         return;
       }
@@ -96,37 +115,35 @@ export class CTraderConnection {
       this.reconnectAttempt = 0;
       this.setState({ status: "connecting", attempt: 1 });
 
-      const ws = new WebSocket(this.endpoint);
-      this.ws = ws;
+      const socket = tls.connect({ host: this.host, port: this.port });
+      this.socket = socket;
 
-      const onOpen = () => {
+      const onSecureConnect = () => {
         cleanup();
         this.reconnectAttempt = 0;
         this.hasConnectedOnce = true;
+        this.recvBuffer = Buffer.alloc(0);
         this.setState({ status: "connected", since: Date.now() });
         this.startHeartbeat();
         resolve();
       };
 
-      const onError = (event: Event) => {
+      const onError = (err: Error) => {
         cleanup();
-        this.emit("error", event);
-        reject(new Error("WebSocket connection failed"));
+        this.emit("error", err);
+        reject(new Error(`TLS connection failed: ${err.message}`));
       };
 
       const cleanup = () => {
-        ws.removeEventListener("open", onOpen);
-        ws.removeEventListener("error", onError);
+        socket.removeListener("secureConnect", onSecureConnect);
+        socket.removeListener("error", onError);
       };
 
-      ws.addEventListener("open", onOpen);
-      ws.addEventListener("error", onError);
+      socket.on("secureConnect", onSecureConnect);
+      socket.on("error", onError);
 
-      ws.addEventListener("message", (event: MessageEvent) => {
-        this.handleMessage(event);
-      });
-
-      ws.addEventListener("close", () => {
+      socket.on("data", (chunk: Buffer) => this.handleData(chunk));
+      socket.on("close", () => {
         this.stopHeartbeat();
         this.rejectPending(new Error("Connection closed"));
         if (this._state.status !== "disconnected") {
@@ -148,25 +165,24 @@ export class CTraderConnection {
     this.stopHeartbeat();
     this.rejectPending(new Error("Client disconnected"));
 
-    if (this.ws !== null) {
-      this.ws.close();
-      this.ws = null;
+    if (this.socket !== null) {
+      this.socket.destroy();
+      this.socket = null;
     }
 
     this.setState({ status: "disconnected" });
   }
 
+  // ─── Send ───────────────────────────────────────────────────────────────
+
   send(payloadType: number, payload?: Record<string, unknown>): string {
-    if (this.ws === null || this.ws.readyState !== WebSocket.OPEN) {
+    if (this.socket === null || this.socket.destroyed) {
       throw new NotConnectedError();
     }
 
     const clientMsgId = crypto.randomUUID();
-    const envelope: Envelope =
-      payload !== undefined
-        ? { clientMsgId, payloadType, payload }
-        : { clientMsgId, payloadType };
-    this.ws.send(JSON.stringify(envelope));
+    const frame = encodeMessage(payloadType, payload, clientMsgId);
+    this.socket.write(frame);
     this.lastSendAt = Date.now();
     return clientMsgId;
   }
@@ -192,6 +208,8 @@ export class CTraderConnection {
       this.pending.set(clientMsgId, { resolve, reject, timeout });
     });
   }
+
+  // ─── Event handlers ─────────────────────────────────────────────────────
 
   on(payloadType: number, handler: PayloadHandler): () => void {
     let handlers = this.payloadHandlers.get(payloadType);
@@ -221,29 +239,41 @@ export class CTraderConnection {
     this.eventHandlers.get(event)?.delete(handler);
   }
 
-  private handleMessage(event: MessageEvent): void {
-    const raw =
-      typeof event.data === "string" ? event.data : String(event.data);
+  // ─── TCP framing: 4-byte length prefix ──────────────────────────────────
 
-    let envelope: Envelope;
-    try {
-      envelope = JSON.parse(raw) as Envelope;
-    } catch {
-      return;
+  private handleData(chunk: Buffer): void {
+    this.recvBuffer = Buffer.concat([this.recvBuffer, chunk]);
+
+    // Process as many complete messages as available
+    while (this.recvBuffer.length >= 4) {
+      const msgLen = this.recvBuffer.readUInt32BE(0);
+      if (this.recvBuffer.length < 4 + msgLen) break; // incomplete message
+
+      const msgBytes = this.recvBuffer.subarray(4, 4 + msgLen);
+      this.recvBuffer = this.recvBuffer.subarray(4 + msgLen);
+
+      try {
+        const decoded = decodeMessage(msgBytes);
+        this.handleMessage(decoded);
+      } catch (e) {
+        this.emit("error", e);
+      }
     }
+  }
 
-    this.emit("message", envelope);
+  private handleMessage(msg: DecodedMessage): void {
+    this.emit("message", msg);
 
-    const { clientMsgId, payloadType, payload } = envelope;
+    const { clientMsgId, payloadType, payload } = msg;
 
+    // Heartbeat: echo back immediately (matching official Python SDK)
     if (payloadType === PayloadType.HEARTBEAT_EVENT) {
       this.lastHeartbeatAt = Date.now();
-      // Respond immediately — the official SDK echoes every server heartbeat
-      // back as a pong. Without this the server considers us dead.
       this.sendHeartbeat();
       return;
     }
 
+    // Request/response correlation
     if (clientMsgId !== undefined && this.pending.has(clientMsgId)) {
       const req = this.pending.get(clientMsgId)!;
       this.pending.delete(clientMsgId);
@@ -253,29 +283,34 @@ export class CTraderConnection {
         payloadType === PayloadType.ERROR_RES ||
         payloadType === PayloadType.OA_ERROR_RES
       ) {
-        const err = payload as unknown as OAErrorPayload | undefined;
-        req.reject(this.makeError(err));
+        req.reject(
+          this.makeError(payload as unknown as OAErrorPayload | undefined),
+        );
         return;
       }
 
-      req.resolve(payload ?? {});
+      req.resolve(payload);
       return;
     }
 
+    // Unsolicited error
     if (
       payloadType === PayloadType.ERROR_RES ||
       payloadType === PayloadType.OA_ERROR_RES
     ) {
-      const err = payload as unknown as OAErrorPayload | undefined;
-      this.emit("error", this.makeError(err));
+      this.emit(
+        "error",
+        this.makeError(payload as unknown as OAErrorPayload | undefined),
+      );
       return;
     }
 
+    // Push events (EXECUTION_EVENT, SPOT_EVENT, etc.)
     const handlers = this.payloadHandlers.get(payloadType);
     if (handlers !== undefined) {
       for (const handler of handlers) {
         try {
-          handler(payload ?? {});
+          handler(payload);
         } catch (e) {
           this.emit("error", e);
         }
@@ -283,14 +318,12 @@ export class CTraderConnection {
     }
   }
 
-  /**
-   * Send a bare heartbeat frame (no clientMsgId).
-   * Mirrors the Python SDK's `self.send(ProtoHeartbeatEvent(), True)`.
-   */
+  // ─── Heartbeat ──────────────────────────────────────────────────────────
+
   private sendHeartbeat(): void {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      const envelope: Envelope = { payloadType: PayloadType.HEARTBEAT_EVENT };
-      this.ws.send(JSON.stringify(envelope));
+    if (this.socket && !this.socket.destroyed) {
+      const frame = encodeHeartbeat();
+      this.socket.write(frame);
       this.lastSendAt = Date.now();
     }
   }
@@ -301,13 +334,11 @@ export class CTraderConnection {
     this.lastHeartbeatAt = now;
     this.lastSendAt = now;
 
-    // Idle-based heartbeat: check every HEARTBEAT_CHECK_MS, send if we
-    // haven't sent anything for HEARTBEAT_IDLE_MS.  This matches the
-    // official Python SDK's `_sendStrings` loop which checks every 1 s
-    // and sends a heartbeat when idle for >20 s.
+    // Idle-based heartbeat: send if we haven't sent anything recently
     this.heartbeatInterval = setInterval(() => {
       if (
-        this.ws?.readyState === WebSocket.OPEN &&
+        this.socket &&
+        !this.socket.destroyed &&
         Date.now() - this.lastSendAt >= HEARTBEAT_IDLE_MS
       ) {
         this.sendHeartbeat();
@@ -317,7 +348,7 @@ export class CTraderConnection {
     // Liveness check: close if we haven't heard from the server
     this.heartbeatCheckInterval = setInterval(() => {
       if (Date.now() - this.lastHeartbeatAt > HEARTBEAT_TIMEOUT_MS) {
-        this.ws?.close();
+        this.socket?.destroy();
       }
     }, HEARTBEAT_CHECK_MS);
   }
@@ -332,6 +363,8 @@ export class CTraderConnection {
       this.heartbeatCheckInterval = null;
     }
   }
+
+  // ─── Reconnect ──────────────────────────────────────────────────────────
 
   private scheduleReconnect(): void {
     if (!this.shouldReconnect) return;
@@ -368,18 +401,19 @@ export class CTraderConnection {
 
     this.setState({ status: "connecting", attempt: this.reconnectAttempt });
 
-    const ws = new WebSocket(this.endpoint);
-    this.ws = ws;
+    const socket = tls.connect({ host: this.host, port: this.port });
+    this.socket = socket;
 
-    ws.addEventListener("open", async () => {
+    socket.on("secureConnect", async () => {
       this.reconnectAttempt = 0;
+      this.recvBuffer = Buffer.alloc(0);
       const since = Date.now();
       this.setState({ status: "connected", since });
       this.startHeartbeat();
+
       if (this.hasConnectedOnce && this.onReconnect !== undefined) {
         try {
           await this.onReconnect();
-          // Only emit ready if we're still connected after onReconnect
           if (this._state.status === "connected") {
             this.setState({ status: "ready", since });
           }
@@ -387,26 +421,25 @@ export class CTraderConnection {
           this.emit("error", e);
         }
       } else {
-        // Initial connect (no onReconnect) — immediately ready
         this.setState({ status: "ready", since });
       }
     });
 
-    ws.addEventListener("message", (event: MessageEvent) => {
-      this.handleMessage(event);
+    socket.on("data", (chunk: Buffer) => this.handleData(chunk));
+
+    socket.on("error", (err: Error) => {
+      this.emit("error", err);
     });
 
-    ws.addEventListener("error", (event: Event) => {
-      this.emit("error", event);
-    });
-
-    ws.addEventListener("close", () => {
+    socket.on("close", () => {
       this.stopHeartbeat();
       this.rejectPending(new Error("Connection closed"));
       this.setState({ status: "disconnected" });
       this.scheduleReconnect();
     });
   }
+
+  // ─── Helpers ────────────────────────────────────────────────────────────
 
   private setState(state: ConnectionState): void {
     this._state = state;
