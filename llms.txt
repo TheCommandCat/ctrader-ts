@@ -21,7 +21,7 @@ Credentials resolution order: stored config → env vars (CTRADER_CLIENT_ID, CTR
 ```
 connect()            → CTrader (high-level, human-friendly)
   └─ CTrader
-       ├─ connection   → CTraderConnection (WebSocket, heartbeat, reconnect)
+       ├─ connection   → CTraderConnection (WebSocket, heartbeat, reconnect, auto-retry)
        └─ raw
             ├─ auth    → CTraderAuth (app/account auth, token management)
             ├─ trading → CTraderTrading (order CRUD, execution events)
@@ -39,6 +39,8 @@ Most users only need `connect()` + `CTrader` methods. The `raw.*` modules are fo
 - **Position IDs**: Every `buy()`/`sell()` returns the real cTrader `positionId`. Use it for `modify()`, `resize()`, `close()`.
 - **Prices**: Raw protocol prices are integers (divide by 10^digits for decimal). SpotPrice events include pre-computed `bidDecimal`/`askDecimal`.
 - **Timestamps**: All timestamps are Unix milliseconds.
+- **Auto-retry**: Rate-limit errors (REQUEST_FREQUENCY_EXCEEDED) are automatically retried with exponential backoff (up to 3 retries). No user code needed.
+- **Enriched types**: `getState()` returns positions with computed `volumeInLots` and `entryPrice`. `getTrader()` returns `leverage` as a clean number (e.g. 100, 200, 500).
 
 ## CTrader — High-Level API
 
@@ -46,13 +48,13 @@ Most users only need `connect()` + `CTrader` methods. The `raw.*` modules are fo
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `getState()` | `AccountState` | Complete snapshot: balance, equity, margin, P&L, positions, orders. **Call this first.** |
-| `getTrader()` | `Trader` | Account profile: balance, leverage, type, access rights |
+| `getState()` | `AccountState` | Complete snapshot: balance, equity, margin, P&L, positions (with volumeInLots, entryPrice), orders. **Call this first.** |
+| `getTrader()` | `EnrichedTrader` | Account profile with computed `leverage` field (e.g. 100, 200, 500) |
 | `getPositions(returnProtectionOrders?)` | `{ positions, orders }` | All open positions and pending orders |
-| `getDeals(from?, to?, maxRows?)` | `{ deals, hasMore }` | Deal (execution) history |
+| `getDeals(opts?)` | `{ deals, hasMore }` | Deal history. Accepts `{ from?, to?, maxRows? }`. Defaults to last 24h. |
 | `getDealsByPosition(positionId, from?, to?)` | `Deal[]` | Deals for a specific position |
 | `getDealOffsets(dealId)` | `{ offsetBy, offsetting }` | Deal offset links |
-| `getOrders(from?, to?)` | `{ orders, hasMore }` | Order history |
+| `getOrders(opts?)` | `{ orders, hasMore }` | Order history. Accepts `{ from?, to? }`. Defaults to last 24h. |
 | `getCashFlow(from, to)` | `DepositWithdraw[]` | Deposit/withdrawal history (max 7 days) |
 | `getExpectedMargin(symbol, volumesInLots[])` | `{ margins, moneyDigits? }` | Margin estimate before trading |
 | `getUnrealizedPnl()` | `{ pnls, moneyDigits }` | Unrealised P&L for all positions |
@@ -71,7 +73,7 @@ Most users only need `connect()` + `CTrader` methods. The `raw.*` modules are fo
 | `buyStop(symbol, opts)` | `ExecutionEvent` | Stop buy (triggers at stopPrice) |
 | `sellStop(symbol, opts)` | `ExecutionEvent` | Stop sell |
 | `stopLimit(symbol, tradeSide, opts)` | `ExecutionEvent` | Stop-limit order |
-| `modify(positionId, { sl?, tp? })` | `void` | Modify SL/TP on an open position |
+| `modify(positionId, { sl?, tp? })` | `void` | Modify SL/TP on an open position. Preserves existing SL/TP when only one is changed. |
 | `resize(positionId, newLots)` | `ExecutionEvent \| undefined` | Change position volume to a new target |
 | `close(positionId, { lots? }?)` | `ExecutionEvent` | Close position (full or partial) |
 | `closeSymbol(symbol)` | `ExecutionEvent[]` | Close all positions on a symbol |
@@ -85,6 +87,7 @@ Most users only need `connect()` + `CTrader` methods. The `raw.*` modules are fo
 |--------|---------|-------------|
 | `getSymbols(includeArchived?)` | `LightSymbol[]` | All available symbols (cached) |
 | `getSymbolDetails(symbolsOrIds[])` | `FullSymbol[]` | Full symbol details: spread, swap, commission, schedule |
+| `getSymbolInfo(symbol)` | `FullSymbol` | Single symbol convenience — same as getSymbolDetails but for one symbol |
 | `refreshSymbols()` | `void` | Force-refresh the symbol cache |
 | `watchSpots(symbols[], handler)` | `() => Promise<void>` | Stream live bid/ask. Returns unsubscribe fn. |
 | `watchDepth(symbols[], handler)` | `() => Promise<void>` | Stream level 2 / depth-of-market. Returns unsubscribe fn. |
@@ -142,6 +145,19 @@ All return an unsubscribe function `() => void`.
 { equity: 0.02 }    // Risk 2% of account equity
 ```
 
+## Enriched Types
+
+### EnrichedPosition (returned by getState())
+
+Extends `Position` with computed convenience fields:
+- `volumeInLots: number` — Volume in lots (e.g. 0.01, 0.1, 1.0)
+- `entryPrice: number | undefined` — Same as `position.price`, provided for clarity
+
+### EnrichedTrader (returned by getTrader())
+
+Extends `Trader` with:
+- `leverage: number | undefined` — Clean leverage ratio (e.g. 100, 200, 500). Computed from `leverageInCents / 100`.
+
 ## Error Handling
 
 ```ts
@@ -153,8 +169,9 @@ try {
   if (e instanceof CTraderError) {
     e.code;                // Machine-readable error code string
     e.description;         // Human-readable description
+    e.hint;                // Actionable recovery hint (e.g. "Run `ctrader-ts auth` to re-authenticate")
     e.isAuthError;         // Token expired, not authenticated, etc.
-    e.isRateLimit;         // REQUEST_FREQUENCY_EXCEEDED — wait e.retryAfter ms
+    e.isRateLimit;         // REQUEST_FREQUENCY_EXCEEDED — auto-retried, only thrown after 3 failures
     e.isMaintenance;       // Server under maintenance — try later
     e.retryAfter;          // ms to wait (rate limit only)
     e.maintenanceEndTimestamp; // Unix ms when maintenance ends
@@ -164,13 +181,14 @@ try {
 }
 ```
 
-## Reconnection
+Error messages include actionable hints for common issues (auth failures, rate limits, invalid volumes, market closed, etc.).
 
-Automatic with exponential backoff (2s → 60s max). On reconnect:
-1. Re-authenticates (app + account)
-2. Restores all active spot/depth/trendbar subscriptions
+## Reconnection & Auto-Retry
 
-No user action needed.
+- **Connection**: Automatic reconnect with exponential backoff (2s → 60s max). Re-authenticates and restores subscriptions.
+- **Rate limits**: Automatic retry with exponential backoff (1s → 4s, up to 3 retries). Uses `retryAfter` from server when available.
+
+No user action needed for either.
 
 ## Enums (commonly used)
 
@@ -209,6 +227,8 @@ ctrader-ts modify 12345678 --sl-pips 30             # Modify SL/TP
 ctrader-ts resize 12345678 0.2                      # Resize position
 ctrader-ts watch EURUSD GBPUSD                      # Live prices
 ctrader-ts bars EURUSD H1 2024-01-01 2024-12-31    # Historical candles
+ctrader-ts symbols                                  # List all available symbols
+ctrader-ts symbol-info EURUSD                       # Full details for a symbol
 ctrader-ts state --json                             # JSON output for piping
 ```
 
@@ -219,18 +239,23 @@ src/
 ├── index.ts          — Package entry point, re-exports everything
 ├── connect.ts        — connect() convenience function (auth + connect in one call)
 ├── client.ts         — CTrader class (high-level API with human-friendly units)
-├── connection.ts     — CTraderConnection (WebSocket, heartbeat, reconnect)
+├── connection.ts     — CTraderConnection (WebSocket, heartbeat, reconnect, auto-retry)
 ├── config.ts         — Credential resolution (file → env → overrides)
 ├── symbol-cache.ts   — Symbol name → ID resolution cache
 ├── helpers.ts        — SL/TP spec resolution (pips/dollars/equity → protocol values)
-├── errors.ts         — CTraderError, RequestTimeoutError, NotConnectedError
+├── errors.ts         — CTraderError (with actionable hints), RequestTimeoutError, NotConnectedError
 ├── enums.ts          — All protocol enums (PayloadType, OrderType, TradeSide, etc.)
-├── types.ts          — All TypeScript interfaces (Position, Order, Deal, events, etc.)
+├── types.ts          — All TypeScript interfaces (Position, EnrichedPosition, Order, Deal, events, etc.)
 └── modules/
     ├── auth.ts       — CTraderAuth (app auth, account auth, token ops)
     ├── trading.ts    — CTraderTrading (order CRUD, execution events)
     ├── account.ts    — CTraderAccount (balance, history, margin)
     └── market.ts     — CTraderMarket (symbols, spots, trendbars, depth)
+
+examples/
+├── basic-trade.ts     — Open, modify, close a position
+├── watch-and-trade.ts — Stream prices and react to conditions
+└── portfolio-report.ts — Account state and position report
 
 cli/
 └── index.ts          — CLI entry point (commander-based)

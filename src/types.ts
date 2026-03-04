@@ -551,10 +551,48 @@ export interface AccountState {
   marginLevel?: number;
   /** Sum of unrealised P&L across all open positions */
   unrealizedPnl: number;
-  /** All currently open positions */
-  positions: Position[];
+  /** All currently open positions (enriched with volumeInLots, entryPrice) */
+  positions: EnrichedPosition[];
   /** All pending orders (limit, stop, stop-limit) */
   orders: Order[];
   /** Decimal precision for monetary values (e.g. 2 = cents) */
   moneyDigits: number;
+}
+
+/**
+ * Position with human-friendly computed fields.
+ * Returned by getState() — same as Position but with convenience properties.
+ */
+export interface EnrichedPosition extends Position {
+  /** Volume in lots (e.g. 0.01, 0.1, 1.0) — computed from tradeData.volume */
+  volumeInLots: number;
+  /** Entry price alias — same as position.price, provided for clarity */
+  entryPrice: number | undefined;
+}
+
+/**
+ * Trader profile with human-friendly computed fields.
+ * Returned by getTrader() — same as Trader but with convenience properties.
+ */
+export interface EnrichedTrader extends Trader {
+  /** Leverage ratio as a clean number (e.g. 100, 200, 500). Computed from leverageInCents / 100 */
+  leverage: number | undefined;
+}
+
+/** Options for querying deal history via the high-level API */
+export interface GetDealsOptions {
+  /** Start timestamp in ms (defaults to 24h ago) */
+  from?: number;
+  /** End timestamp in ms (defaults to now) */
+  to?: number;
+  /** Max rows to return (API max ~5000) */
+  maxRows?: number;
+}
+
+/** Options for querying order history via the high-level API */
+export interface GetOrdersOptions {
+  /** Start timestamp in ms (defaults to 24h ago) */
+  from?: number;
+  /** End timestamp in ms (defaults to now) */
+  to?: number;
 }

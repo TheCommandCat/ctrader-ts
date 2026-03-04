@@ -343,10 +343,11 @@ program
 	.option("--max <rows>", "Max results")
 	.action(async (opts: { from?: string; to?: string; max?: string }) => {
 		const ct = await getClient();
-		const from = opts.from !== undefined ? Number(opts.from) : undefined;
-		const to = opts.to !== undefined ? Number(opts.to) : undefined;
-		const maxRows = opts.max !== undefined ? Number(opts.max) : undefined;
-		const result = await ct.getDeals(from, to, maxRows);
+		const dealOpts: Record<string, number> = {};
+		if (opts.from !== undefined) dealOpts["from"] = Number(opts.from);
+		if (opts.to !== undefined) dealOpts["to"] = Number(opts.to);
+		if (opts.max !== undefined) dealOpts["maxRows"] = Number(opts.max);
+		const result = await ct.getDeals(dealOpts);
 		dump(result);
 		ct.disconnect();
 	});
@@ -405,6 +406,140 @@ program
 		process.on("SIGINT", () => { void cleanup(); });
 		process.on("SIGTERM", () => { void cleanup(); });
 	});
+// ─── symbols ────────────────────────────────────────────────────────────────
+
+
+
+program
+
+	.command("symbols")
+
+	.description("List all available trading symbols")
+
+	.option("--json", "Output as JSON")
+
+	.action(async (opts: { json?: boolean }) => {
+
+		const ct = await getClient();
+
+		const symbols = await ct.getSymbols();
+
+		if (opts.json) {
+
+			dump(symbols);
+
+		} else {
+
+			// Table format with columns: symbolId, symbolName
+
+			const rows: string[][] = symbols.map((s) => [String(s.symbolId), s.symbolName || ""]);
+
+			const header = ["Symbol ID", "Symbol Name"];
+
+			const colWidths = [
+				Math.max(header[0]?.length ?? 0, ...(rows.length > 0 ? rows.map((r) => r[0]?.length ?? 0) : [1])),
+				Math.max(header[1]?.length ?? 0, ...(rows.length > 0 ? rows.map((r) => r[1]?.length ?? 0) : [1])),
+			];
+
+			const sep = (widths: number[]) =>
+
+				"  " + widths.map((w) => "-".repeat(w)).join("  ") + "\n";
+
+			const row = (cells: string[], widths: number[]) =>
+
+				"  " + cells.map((c, i) => String(c).padEnd(widths[i] ?? 0)).join("  ") + "\n";
+
+			process.stdout.write(row(header, colWidths));
+
+			process.stdout.write(sep(colWidths));
+
+			for (const r of rows) {
+
+				process.stdout.write(row(r, colWidths));
+
+			}
+
+		}
+
+		ct.disconnect();
+
+	});
+
+
+
+// ─── symbol-info ────────────────────────────────────────────────────────────
+
+
+
+program
+
+	.command("symbol-info")
+
+	.description("Show detailed info for a symbol")
+
+	.argument("<symbol>", "Symbol name (e.g. EURUSD)")
+
+	.option("--json", "Output as JSON")
+
+	.action(async (symbol: string, opts: { json?: boolean }) => {
+
+		const ct = await getClient();
+
+		const details = await ct.getSymbolDetails([symbol]);
+
+		if (details.length === 0) {
+
+			process.stderr.write(`Symbol not found: ${symbol}\n`);
+
+			ct.disconnect();
+
+			process.exit(1);
+
+		}
+
+		const info = details[0]!;
+
+		if (opts.json) {
+
+			dump(info);
+
+		} else {
+
+			// Formatted key-value output
+
+			const fields: [string, string][] = [
+				["Symbol ID", String(info.symbolId)],
+				["Symbol Name", String(info.symbolId)],
+				["Digits", String(info.digits)],
+				["Pip Position", String(info.pipPosition)],
+				["Lot Size", String(info.lotSize ?? "")],
+				["Min Volume", String(info.minVolume ?? "")],
+				["Max Volume", String(info.maxVolume ?? "")],
+				["Step Volume", String(info.stepVolume ?? "")],
+			];
+
+			if (info.schedule !== undefined && info.schedule.length > 0) {
+
+				fields.push(["Trading Hours", info.schedule.length + " schedule(s)"]);
+
+			}
+
+			const maxKeyLen = Math.max(...fields.map((f) => f[0].length));
+
+			for (const [key, val] of fields) {
+
+				process.stdout.write(`${key.padEnd(maxKeyLen)}  ${String(val)}\n`);
+
+			}
+
+		}
+
+		ct.disconnect();
+
+	});
+
+
+
 
 program.parseAsync(process.argv).catch((err: unknown) => {
 	process.stderr.write(String(err) + "\n");

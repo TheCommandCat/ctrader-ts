@@ -223,11 +223,39 @@ export class CTraderConnection {
     return clientMsgId;
   }
 
+  private static readonly MAX_RETRIES = 3;
+  private static readonly INITIAL_RETRY_DELAY_MS = 1_000;
+
   /**
    * Send a request and wait for the matching response.
-   * Rejects on timeout or API error.
+   * Automatically retries on rate-limit errors with exponential backoff.
+   * Rejects on timeout, non-retryable API error, or max retries exceeded.
    */
-  request(
+  async request(
+    payloadType: number,
+    payload: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    let lastError: Error | undefined;
+    for (let attempt = 0; attempt <= CTraderConnection.MAX_RETRIES; attempt++) {
+      try {
+        return await this.requestOnce(payloadType, payload);
+      } catch (err) {
+        if (err instanceof CTraderError && err.isRateLimit && attempt < CTraderConnection.MAX_RETRIES) {
+          lastError = err;
+          const delay = err.retryAfter ?? CTraderConnection.INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt);
+          await new Promise<void>((r) => setTimeout(r, delay));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastError ?? new Error("Max retries exceeded");
+  }
+
+  /**
+   * Internal: send a single request without retry.
+   */
+  private requestOnce(
     payloadType: number,
     payload: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {

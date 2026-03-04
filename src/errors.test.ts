@@ -11,7 +11,7 @@ describe("CTraderError", () => {
       code: "OA_AUTH_TOKEN_EXPIRED",
       description: "Token has expired",
     });
-    expect(err.message).toBe("[OA_AUTH_TOKEN_EXPIRED] Token has expired");
+    expect(err.message).toBe("[OA_AUTH_TOKEN_EXPIRED] Token has expired \u2014 Your access token has expired. Run `ctrader-ts auth` to re-authenticate.");
     expect(err.name).toBe("CTraderError");
     expect(err.code).toBe("OA_AUTH_TOKEN_EXPIRED");
     expect(err.description).toBe("Token has expired");
@@ -109,7 +109,7 @@ describe("RequestTimeoutError", () => {
   test("includes payloadType, clientMsgId, and timeout in message", () => {
     const err = new RequestTimeoutError(2100, "msg-123", 15000);
     expect(err.message).toBe(
-      "Request timed out after 15000ms (payloadType: 2100, id: msg-123)",
+      "Request timed out after 15000ms (payloadType: 2100, id: msg-123). Check your network connection or try increasing requestTimeoutMs.",
     );
     expect(err.name).toBe("RequestTimeoutError");
     expect(err.payloadType).toBe(2100);
@@ -126,7 +126,7 @@ describe("RequestTimeoutError", () => {
 describe("NotConnectedError", () => {
   test("has correct message and name", () => {
     const err = new NotConnectedError();
-    expect(err.message).toBe("Not connected to cTrader API");
+    expect(err.message).toBe("Not connected to cTrader API. Call connect() first, or check that the connection hasn't been dropped.");
     expect(err.name).toBe("NotConnectedError");
   });
 

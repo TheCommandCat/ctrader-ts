@@ -28,9 +28,13 @@ import type {
   DepositWithdraw,
   DepthEvent,
   DynamicLeverage,
+  EnrichedPosition,
+  EnrichedTrader,
   ExecutionEvent,
   ExpectedMargin,
   FullSymbol,
+  GetDealsOptions,
+  GetOrdersOptions,
   LightSymbol,
   MarginCall,
   MarginCallEvent,
@@ -43,7 +47,6 @@ import type {
   SpotEvent,
   SymbolChangedEvent,
   TickData,
-  Trader,
   TraderUpdatedEvent,
   TrailingSLChangedEvent,
   Trendbar,
@@ -223,6 +226,17 @@ export class CTrader {
     return this.raw.market.getSymbolsById(ids);
   }
 
+  /**
+   * Full details for a single symbol: spread, commission, swap, lot size, schedule.
+   * Convenience wrapper around getSymbolDetails() for when you only need one.
+   * @param symbol - Symbol name ("EURUSD") or numeric ID
+   */
+  async getSymbolInfo(symbol: Symbol): Promise<FullSymbol> {
+    const [info] = await this.getSymbolDetails([symbol]);
+    if (info === undefined) throw new Error(`Symbol ${String(symbol)} not found`);
+    return info;
+  }
+
   /** Force-refresh the symbol name→ID cache. Call if the broker adds new symbols. */
   async refreshSymbols(): Promise<void> {
     await this.symbols.refresh();
@@ -230,9 +244,16 @@ export class CTrader {
 
   // ─── Account ─────────────────────────────────────────────────────────────
 
-  /** Trader profile: balance, equity, margin, account type, access rights */
-  async getTrader(): Promise<Trader> {
-    return this.raw.account.getTrader();
+  /** Trader profile with computed `leverage` field (e.g. 100, 200, 500) */
+  async getTrader(): Promise<EnrichedTrader> {
+    const trader = await this.raw.account.getTrader();
+    return {
+      ...trader,
+      leverage:
+        trader.leverageInCents !== undefined
+          ? trader.leverageInCents / 100
+          : undefined,
+    };
   }
 
   /**
@@ -271,13 +292,19 @@ export class CTrader {
 
     const freeMargin = equity - usedMargin;
 
+    const enrichedPositions: EnrichedPosition[] = reconciled.positions.map((p) => ({
+      ...p,
+      volumeInLots: unitsToLots(p.tradeData.volume),
+      entryPrice: p.price,
+    }));
+
     const result: AccountState = {
       balance,
       equity,
       usedMargin,
       freeMargin,
       unrealizedPnl,
-      positions: reconciled.positions,
+      positions: enrichedPositions,
       orders: reconciled.orders,
       moneyDigits,
     };
@@ -290,24 +317,22 @@ export class CTrader {
   }
 
   /**
-   * Deal (execution) history.
-   * @param from - Start Unix timestamp in ms
-   * @param to - End Unix timestamp in ms
-   * @param maxRows - Limit results (API max ~5000)
+   * Deal (execution) history. Defaults to last 24 hours if no time range specified.
+   * @param opts - Optional time range and row limit
    */
   async getDeals(
-    from?: number,
-    to?: number,
-    maxRows?: number,
+    opts: GetDealsOptions = {},
   ): Promise<{ deals: Deal[]; hasMore: boolean }> {
+    const now = Date.now();
     const params: {
-      fromTimestamp?: number;
-      toTimestamp?: number;
+      fromTimestamp: number;
+      toTimestamp: number;
       maxRows?: number;
-    } = {};
-    if (from !== undefined) params.fromTimestamp = from;
-    if (to !== undefined) params.toTimestamp = to;
-    if (maxRows !== undefined) params.maxRows = maxRows;
+    } = {
+      fromTimestamp: opts.from ?? now - 24 * 60 * 60 * 1000,
+      toTimestamp: opts.to ?? now,
+    };
+    if (opts.maxRows !== undefined) params.maxRows = opts.maxRows;
     return this.raw.account.getDeals(params);
   }
 
@@ -334,15 +359,18 @@ export class CTrader {
     return this.raw.account.getDealOffsets(dealId);
   }
 
-  /** Order history */
+  /**
+   * Order history. Defaults to last 24 hours if no time range specified.
+   * @param opts - Optional time range
+   */
   async getOrders(
-    from?: number,
-    to?: number,
+    opts: GetOrdersOptions = {},
   ): Promise<{ orders: Order[]; hasMore: boolean }> {
-    const params: { fromTimestamp?: number; toTimestamp?: number } = {};
-    if (from !== undefined) params.fromTimestamp = from;
-    if (to !== undefined) params.toTimestamp = to;
-    return this.raw.account.getOrders(params);
+    const now = Date.now();
+    return this.raw.account.getOrders({
+      fromTimestamp: opts.from ?? now - 24 * 60 * 60 * 1000,
+      toTimestamp: opts.to ?? now,
+    });
   }
 
   /** Deposit/withdrawal history. Max range: 7 days */
@@ -525,26 +553,76 @@ export class CTrader {
     );
 
     // Convert relative SL/TP to absolute prices: entry ± distance
+    // If pos.price is unavailable (just-opened position), fetch current spot as fallback
+    let entryPrice = pos.price;
+    const needPrice =
+      (sltp.relativeStopLoss !== undefined || sltp.relativeTakeProfit !== undefined) &&
+      entryPrice === undefined;
+    if (needPrice) {
+      // Fetch a live spot price as fallback when position price isn't available yet
+      const spot = await new Promise<SpotEvent>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          off();
+          void this.raw.market.unsubscribeSpots([symbolId]).catch(() => {});
+          reject(new Error(`Timed out fetching spot price for symbol ${symbolId}`));
+        }, 10_000);
+        const off = this.raw.market.onSpot((evt: SpotEvent) => {
+          if (evt.symbolId === symbolId) {
+            clearTimeout(timer);
+            off();
+            void this.raw.market.unsubscribeSpots([symbolId]).catch(() => {});
+            resolve(evt);
+          }
+        });
+        this.raw.market.subscribeSpots([symbolId]).catch((err: unknown) => {
+          clearTimeout(timer);
+          off();
+          reject(err);
+        });
+      });
+      // Convert raw protocol price to decimal (same as watchSpots)
+      const bidDecimal = spot.bid !== undefined ? spot.bid / 100_000 : undefined;
+      const askDecimal = spot.ask !== undefined ? spot.ask / 100_000 : undefined;
+      entryPrice =
+        pos.tradeData.tradeSide === TradeSide.BUY
+          ? (bidDecimal ?? askDecimal)
+          : (askDecimal ?? bidDecimal);
+    }
+
+    // Build amend params, always preserving existing SL/TP when not being changed.
+    // The cTrader API clears SL/TP if they are omitted from the amend request.
     const amendParams: AmendSltpParams = {};
 
-    if (sltp.relativeStopLoss !== undefined && pos.price !== undefined) {
+    // --- Stop Loss ---
+    if (sltp.relativeStopLoss !== undefined) {
+      if (entryPrice === undefined) {
+        throw new Error(
+          `Cannot set stop loss: position ${positionId} has no entry price and spot price could not be resolved.`
+        );
+      }
       const distance = sltp.relativeStopLoss / 100_000;
       amendParams.stopLoss =
         pos.tradeData.tradeSide === TradeSide.BUY
-          ? pos.price - distance
-          : pos.price + distance;
+          ? entryPrice - distance
+          : entryPrice + distance;
     } else if (pos.stopLoss !== undefined) {
       // Preserve existing SL when not being modified — omitting it
       // from the amend request would cause cTrader to clear it.
       amendParams.stopLoss = pos.stopLoss;
     }
 
-    if (sltp.relativeTakeProfit !== undefined && pos.price !== undefined) {
+    // --- Take Profit ---
+    if (sltp.relativeTakeProfit !== undefined) {
+      if (entryPrice === undefined) {
+        throw new Error(
+          `Cannot set take profit: position ${positionId} has no entry price and spot price could not be resolved.`
+        );
+      }
       const distance = sltp.relativeTakeProfit / 100_000;
       amendParams.takeProfit =
         pos.tradeData.tradeSide === TradeSide.BUY
-          ? pos.price + distance
-          : pos.price - distance;
+          ? entryPrice + distance
+          : entryPrice - distance;
     } else if (pos.takeProfit !== undefined) {
       // Preserve existing TP when not being modified — omitting it
       // from the amend request would cause cTrader to clear it.
@@ -581,7 +659,7 @@ export class CTrader {
       const deltaUnits = newUnits - currentUnits;
       return this.raw.trading.marketOrder({
         symbolId: pos.tradeData.symbolId,
-        tradeSide: pos.tradeData.tradeSide as TradeSide,
+        tradeSide: pos.tradeData.tradeSide,
         volume: deltaUnits,
         positionId,
       });

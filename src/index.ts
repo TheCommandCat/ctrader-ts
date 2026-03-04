@@ -119,8 +119,10 @@ export type {
   CtidTraderAccount,
   CtidProfile,
   Trader,
+  EnrichedTrader,
   TradeData,
   Position,
+  EnrichedPosition,
   Order,
   ClosePositionDetail,
   Deal,
@@ -151,4 +153,6 @@ export type {
   TokenPair,
   SlTpSpec,
   AccountState,
+  GetDealsOptions,
+  GetOrdersOptions,
 } from "./types.js";
