@@ -41,6 +41,7 @@ export function loadStoredConfig(): PartialConfig {
   try {
     return JSON.parse(readFileSync(CONFIG_PATH, "utf-8")) as PartialConfig;
   } catch {
+    // Corrupted or unreadable config file — treat as empty
     return {};
   }
 }

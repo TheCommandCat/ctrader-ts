@@ -14,6 +14,9 @@ import type {
   Trendbar,
 } from "../types.js";
 
+/**
+ * Parameters for historical candlestick data request
+ */
 export interface GetTrendbarsParams {
   symbolId: number;
   period: TrendbarPeriod;
@@ -22,6 +25,9 @@ export interface GetTrendbarsParams {
   count?: number;
 }
 
+/**
+ * Parameters for historical tick data request
+ */
 export interface GetTickDataParams {
   symbolId: number;
   type: QuoteType;
@@ -65,6 +71,9 @@ function periodMs(period: TrendbarPeriod): number {
   }
 }
 
+/**
+ * Low-level market data operations — symbols, spot prices, trendbars, depth. Use CTrader (client.ts) for the high-level API.
+ */
 export class CTraderMarket {
   private readonly connection: CTraderConnection;
   private accountId: number;
@@ -102,6 +111,10 @@ export class CTraderMarket {
     return (res["assetClass"] as AssetClass[] | undefined) ?? [];
   }
 
+  /**
+   * Get list of symbols, optionally including archived ones
+   */
+
   async getSymbols(
     includeArchived = false,
   ): Promise<{ symbols: LightSymbol[]; archivedSymbols: ArchivedSymbol[] }> {
@@ -115,6 +128,10 @@ export class CTraderMarket {
         (res["archivedSymbol"] as ArchivedSymbol[] | undefined) ?? [],
     };
   }
+
+  /**
+   * Get full symbol info by IDs
+   */
 
   async getSymbolsById(symbolIds: number[]): Promise<FullSymbol[]> {
     const res = await this.connection.request(PayloadType.SYMBOL_BY_ID_REQ, {
@@ -149,6 +166,10 @@ export class CTraderMarket {
     return (res["symbol"] as LightSymbol[] | undefined) ?? [];
   }
 
+  /**
+   * Subscribe to live spot prices
+   */
+
   async subscribeSpots(
     symbolIds: number[],
     subscribeToSpotTimestamp?: boolean,
@@ -163,6 +184,10 @@ export class CTraderMarket {
     for (const id of symbolIds) this.activeSpotSubscriptions.add(id);
   }
 
+  /**
+   * Unsubscribe from spot prices
+   */
+
   async unsubscribeSpots(symbolIds: number[]): Promise<void> {
     await this.connection.request(PayloadType.UNSUBSCRIBE_SPOTS_REQ, {
       ctidTraderAccountId: this.accountId,
@@ -170,6 +195,10 @@ export class CTraderMarket {
     });
     for (const id of symbolIds) this.activeSpotSubscriptions.delete(id);
   }
+
+  /**
+   * Subscribe to live trendbar updates
+   */
 
   async subscribeLiveTrendbar(
     symbolId: number,
@@ -188,6 +217,10 @@ export class CTraderMarket {
     periods.add(period);
   }
 
+  /**
+   * Unsubscribe from live trendbar updates
+   */
+
   async unsubscribeLiveTrendbar(
     symbolId: number,
     period: TrendbarPeriod,
@@ -204,6 +237,10 @@ export class CTraderMarket {
     }
   }
 
+  /**
+   * Subscribe to market depth
+   */
+
   async subscribeDepth(symbolIds: number[]): Promise<void> {
     await this.connection.request(PayloadType.SUBSCRIBE_DEPTH_REQ, {
       ctidTraderAccountId: this.accountId,
@@ -212,6 +249,10 @@ export class CTraderMarket {
     for (const id of symbolIds) this.activeDepthSubscriptions.add(id);
   }
 
+  /**
+   * Unsubscribe from market depth
+   */
+
   async unsubscribeDepth(symbolIds: number[]): Promise<void> {
     await this.connection.request(PayloadType.UNSUBSCRIBE_DEPTH_REQ, {
       ctidTraderAccountId: this.accountId,
@@ -219,6 +260,10 @@ export class CTraderMarket {
     });
     for (const id of symbolIds) this.activeDepthSubscriptions.delete(id);
   }
+
+  /**
+   * Get historical trendbar/candle data
+   */
 
   async getTrendbars(
     params: GetTrendbarsParams,
@@ -245,6 +290,10 @@ export class CTraderMarket {
     };
   }
 
+  /**
+   * Get historical tick data
+   */
+
   async getTickData(
     params: GetTickDataParams,
   ): Promise<{ ticks: TickData[]; hasMore: boolean }> {
@@ -267,17 +316,29 @@ export class CTraderMarket {
     };
   }
 
+  /**
+   * Subscribe to spot price events
+   */
+
   onSpot(handler: (event: SpotEvent) => void): () => void {
     return this.connection.on(PayloadType.SPOT_EVENT, (payload) => {
       handler(payload as unknown as SpotEvent);
     });
   }
 
+  /**
+   * Subscribe to market depth events
+   */
+
   onDepth(handler: (event: DepthEvent) => void): () => void {
     return this.connection.on(PayloadType.DEPTH_EVENT, (payload) => {
       handler(payload as unknown as DepthEvent);
     });
   }
+
+  /**
+   * Subscribe to symbol change events
+   */
 
   onSymbolChanged(handler: (event: SymbolChangedEvent) => void): () => void {
     return this.connection.on(PayloadType.SYMBOL_CHANGED_EVENT, (payload) => {

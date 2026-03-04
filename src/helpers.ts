@@ -133,7 +133,7 @@ class RequestCache {
 		return new Promise<SpotEvent>((resolve, reject) => {
 			const timeout = setTimeout(() => {
 				unsub();
-				void this.ctx.market.unsubscribeSpots([this.ctx.symbolId]).catch(() => {});
+				void this.ctx.market.unsubscribeSpots([this.ctx.symbolId]).catch(() => { /* fire-and-forget cleanup */ });
 				reject(new Error(`Timed out waiting for spot price on symbol ${this.ctx.symbolId}`));
 			}, 10_000);
 
@@ -141,7 +141,7 @@ class RequestCache {
 				if (event.symbolId === this.ctx.symbolId) {
 					clearTimeout(timeout);
 					unsub();
-					void this.ctx.market.unsubscribeSpots([this.ctx.symbolId]).catch(() => {});
+					void this.ctx.market.unsubscribeSpots([this.ctx.symbolId]).catch(() => { /* fire-and-forget cleanup */ });
 					resolve(event);
 				}
 			});

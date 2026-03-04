@@ -1,3 +1,19 @@
+/**
+ * ctrader-ts — TypeScript client for the cTrader Open API.
+ *
+ * Quick start:
+ * ```ts
+ * import { connect } from "ctrader-ts";
+ * const ct = await connect();
+ * const pos = await ct.buy("EURUSD", { lots: 0.1, sl: { pips: 50 } });
+ * await ct.close(pos.positionId);
+ * ```
+ *
+ * @see {@link connect} for the recommended entry point.
+ * @see {@link CTrader} for the full high-level API.
+ * @packageDocumentation
+ */
+
 export {
   connect,
   DEMO_ENDPOINT,

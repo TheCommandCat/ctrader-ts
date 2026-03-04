@@ -24,6 +24,7 @@ import type {
   TrendbarPeriod,
 } from "./enums.js";
 
+/** Discriminated union for connection lifecycle states. */
 export type ConnectionState =
   | { status: "disconnected" }
   | { status: "connecting"; attempt: number }
@@ -31,6 +32,7 @@ export type ConnectionState =
   | { status: "ready"; since: number }
   | { status: "reconnecting"; attempt: number; nextRetryMs: number };
 
+/** Tradeable asset (currency, commodity, etc.). */
 export interface Asset {
   assetId: number;
   name: string;
@@ -38,28 +40,35 @@ export interface Asset {
   digits?: number;
 }
 
+/** Asset classification group (Forex, Crypto, etc.). */
 export interface AssetClass {
   id?: number;
   name?: string;
   sortingNumber?: number;
 }
 
+/** Time interval within a trading schedule. */
 export interface Interval {
+  /** Start time in seconds since midnight */
   startSecond: number;
+  /** End time in seconds since midnight */
   endSecond: number;
 }
 
+/** Market holiday schedule entry. */
 export interface Holiday {
   holidayId: number;
   name: string;
   description?: string;
   scheduleTimeZone: string;
+  /** Unix timestamp in milliseconds */
   holidayDate: number;
   isRecurring: boolean;
   startSecond?: number;
   endSecond?: number;
 }
 
+/** Category grouping for trading symbols. */
 export interface SymbolCategory {
   id: number;
   assetClassId: number;
@@ -67,6 +76,7 @@ export interface SymbolCategory {
   sortingNumber?: number;
 }
 
+/** Minimal symbol info returned in lists. Use getSymbolsById for full details. */
 export interface LightSymbol {
   symbolId: number;
   symbolName?: string;
@@ -78,6 +88,7 @@ export interface LightSymbol {
   sortingNumber?: number;
 }
 
+/** Delisted/archived symbol reference. */
 export interface ArchivedSymbol {
   symbolId: number;
   name: string;
@@ -85,17 +96,26 @@ export interface ArchivedSymbol {
   description?: string;
 }
 
+/**
+ * Complete symbol specification — digits, pip position, swap rates,
+ * commission, schedule, volume limits.
+ */
 export interface FullSymbol {
   symbolId: number;
+  /** Number of decimal places for price display */
   digits: number;
+  /** Decimal position of a pip (e.g. -4 means 0.0001) */
   pipPosition: number;
   enableShortSelling?: boolean;
   guaranteedStopLoss?: boolean;
   swapRollover3Days?: DayOfWeek;
   swapLong?: number;
   swapShort?: number;
+  /** Volume in protocol units (1 lot = 100,000 units) */
   maxVolume?: number;
+  /** Volume in protocol units (1 lot = 100,000 units) */
   minVolume?: number;
+  /** Volume in protocol units (1 lot = 100,000 units) */
   stepVolume?: number;
   maxExposure?: number;
   schedule?: Interval[];
@@ -113,6 +133,7 @@ export interface FullSymbol {
   tradingMode?: TradingMode;
   rolloverCommission3Days?: DayOfWeek;
   swapCalculationType?: SwapCalculationType;
+  /** Standard lot size in base currency units */
   lotSize?: number;
   preciseTradingCommissionRate?: number;
   preciseMinCommission?: number;
@@ -126,21 +147,27 @@ export interface FullSymbol {
   measurementUnits?: string;
 }
 
+/** cTID trader account reference — links cTrader ID to broker account. */
 export interface CtidTraderAccount {
   ctidTraderAccountId: number;
   isLive?: boolean;
   traderLogin?: number;
+  /** Unix timestamp in milliseconds */
   lastClosingDealTimestamp?: number;
+  /** Unix timestamp in milliseconds */
   lastBalanceUpdateTimestamp?: number;
   brokerTitleShort?: string;
 }
 
+/** cTrader ID user profile. */
 export interface CtidProfile {
   userId: number;
 }
 
+/** Full trader/account profile — balance, leverage, account type, access rights. */
 export interface Trader {
   ctidTraderAccountId: number;
+  /** Balance in deposit currency */
   balance: number;
   balanceVersion?: number;
   managerBonus?: number;
@@ -149,12 +176,14 @@ export interface Trader {
   accessRights?: AccessRights;
   depositAssetId: number;
   swapFree?: boolean;
+  /** Leverage as integer (e.g. 10000 = 100:1) */
   leverageInCents?: number;
   totalMarginCalculationType?: TotalMarginCalculationType;
   maxLeverage?: number;
   traderLogin?: number;
   accountType?: AccountType;
   brokerName?: string;
+  /** Unix timestamp in milliseconds */
   registrationTimestamp?: number;
   isLimitedRisk?: boolean;
   limitedRiskMarginCalculationStrategy?: LimitedRiskMarginCalculationStrategy;
@@ -163,26 +192,33 @@ export interface Trader {
   stopOutStrategy?: StopOutStrategy;
 }
 
+/** Core trade parameters shared between positions and orders. */
 export interface TradeData {
   symbolId: number;
+  /** Volume in protocol units (1 lot = 100,000 units) */
   volume: number;
   tradeSide: TradeSide;
+  /** Unix timestamp in milliseconds */
   openTimestamp?: number;
   label?: string;
   guaranteedStopLoss?: boolean;
   comment?: string;
   measurementUnits?: string;
+  /** Unix timestamp in milliseconds */
   closeTimestamp?: number;
 }
 
+/** An open (or recently closed) trading position. */
 export interface Position {
   positionId: number;
   tradeData: TradeData;
   positionStatus: PositionStatus;
   swap: number;
+  /** Current/entry price */
   price?: number;
   stopLoss?: number;
   takeProfit?: number;
+  /** Unix timestamp in milliseconds */
   utcLastUpdateTimestamp?: number;
   commission?: number;
   marginRate?: number;
@@ -194,14 +230,18 @@ export interface Position {
   trailingStopLoss?: boolean;
 }
 
+/** A pending order (limit, stop, stop-limit) or historical order record. */
 export interface Order {
   orderId: number;
   tradeData: TradeData;
   orderType: OrderType;
   orderStatus: OrderStatus;
+  /** Unix timestamp in milliseconds */
   expirationTimestamp?: number;
   executionPrice?: number;
+  /** Volume in protocol units (1 lot = 100,000 units) */
   executedVolume?: number;
+  /** Unix timestamp in milliseconds */
   utcLastUpdateTimestamp?: number;
   baseSlippagePrice?: number;
   slippageInPoints?: number;
@@ -220,28 +260,37 @@ export interface Order {
   stopTriggerMethod?: OrderTriggerMethod;
 }
 
+/** Details returned when a position is closed — entry price, P&L, commission. */
 export interface ClosePositionDetail {
   entryPrice: number;
   grossProfit: number;
   swap: number;
   commission: number;
+  /** Balance after close */
   balance: number;
   quoteToDepositConversionRate?: number;
+  /** Volume in protocol units (1 lot = 100,000 units) */
   closedVolume?: number;
   balanceVersion?: number;
   moneyDigits?: number;
   pnlConversionFee?: number;
 }
 
+/** A single trade execution (fill). Multiple deals can belong to one order or position. */
 export interface Deal {
   dealId: number;
   orderId: number;
   positionId: number;
+  /** Volume in protocol units (1 lot = 100,000 units) */
   volume: number;
+  /** Volume in protocol units (1 lot = 100,000 units) */
   filledVolume: number;
   symbolId: number;
+  /** Unix timestamp in milliseconds */
   createTimestamp: number;
+  /** Unix timestamp in milliseconds */
   executionTimestamp: number;
+  /** Unix timestamp in milliseconds */
   utcLastUpdateTimestamp?: number;
   executionPrice?: number;
   tradeSide: TradeSide;
@@ -253,13 +302,17 @@ export interface Deal {
   moneyDigits?: number;
 }
 
+/** Links between closing and closed deals. */
 export interface DealOffset {
   dealId: number;
+  /** Volume in protocol units (1 lot = 100,000 units) */
   volume: number;
+  /** Unix timestamp in milliseconds */
   executionTimestamp?: number;
   executionPrice?: number;
 }
 
+/** Bonus credit/debit operation. */
 export interface BonusDepositWithdraw {
   operationType: ChangeBonusType;
   bonusHistoryId: number;
@@ -267,17 +320,21 @@ export interface BonusDepositWithdraw {
   managerDelta: number;
   ibBonus: number;
   ibDelta: number;
+  /** Unix timestamp in milliseconds */
   changeBonusTimestamp: number;
   externalNote?: string;
   introducingBrokerId?: number;
   moneyDigits?: number;
 }
 
+/** Balance deposit/withdrawal operation. */
 export interface DepositWithdraw {
   operationType: ChangeBalanceType;
   balanceHistoryId: number;
+  /** Balance in deposit currency */
   balance: number;
   delta: number;
+  /** Unix timestamp in milliseconds */
   changeBalanceTimestamp: number;
   externalNote?: string;
   balanceVersion?: number;
@@ -285,7 +342,9 @@ export interface DepositWithdraw {
   moneyDigits?: number;
 }
 
+/** OHLCV candlestick bar. */
 export interface Trendbar {
+  /** Volume in protocol units (1 lot = 100,000 units) */
   volume: number;
   period?: TrendbarPeriod;
   low?: number;
@@ -295,56 +354,76 @@ export interface Trendbar {
   utcTimestampInMinutes?: number;
 }
 
+/** Single bid or ask tick. */
 export interface TickData {
+  /** Unix timestamp in milliseconds */
   timestamp: number;
+  /** Raw price (divide by 10^digits for decimal) */
   tick: number;
 }
 
+/** Level 2 / order book entry. */
 export interface DepthQuote {
   id: number;
+  /** Order size/volume */
   size: number;
+  /** Raw bid price (divide by 10^digits for decimal) */
   bid?: number;
+  /** Raw ask price (divide by 10^digits for decimal) */
   ask?: number;
 }
 
+/** Estimated margin requirement for a given volume. */
 export interface ExpectedMargin {
+  /** Volume in protocol units (1 lot = 100,000 units) */
   volume: number;
   buyMargin: number;
   sellMargin: number;
 }
 
+/** Unrealised profit/loss for a single position. */
 export interface PositionUnrealizedPnL {
   positionId: number;
   grossUnrealizedPnL: number;
   netUnrealizedPnL: number;
 }
 
+/** One tier in a dynamic leverage schedule. */
 export interface DynamicLeverageTier {
+  /** Volume threshold in protocol units (1 lot = 100,000 units) */
   volume: number;
   leverage: number;
 }
 
+/** Dynamic leverage schedule — leverage varies by volume. */
 export interface DynamicLeverage {
   leverageId: number;
   tiers: DynamicLeverageTier[];
 }
 
+/** Margin call notification threshold. */
 export interface MarginCall {
   marginCallType: NotificationType;
   marginLevelThreshold: number;
+  /** Unix timestamp in milliseconds */
   utcLastUpdateTimestamp?: number;
 }
 
+/** Live price update event. */
 export interface SpotEvent {
   ctidTraderAccountId: number;
   symbolId: number;
+  /** Raw bid price (divide by 10^digits for decimal) */
   bid?: number;
+  /** Raw ask price (divide by 10^digits for decimal) */
   ask?: number;
   trendbar?: Trendbar[];
   sessionClose?: number;
+  /** Unix timestamp in milliseconds */
   timestamp?: number;
 }
 
+/** Trade execution event — order fill, cancel, modification, swap, deposit/withdrawal. */
 export interface ExecutionEvent {
   ctidTraderAccountId: number;
   executionType: ExecutionType;
@@ -357,6 +436,7 @@ export interface ExecutionEvent {
   isServerEvent?: boolean;
 }
 
+/** Order rejection or error event. */
 export interface OrderErrorEvent {
   ctidTraderAccountId: number;
   errorCode: string;
@@ -365,11 +445,13 @@ export interface OrderErrorEvent {
   description?: string;
 }
 
+/** Account settings or balance change event. */
 export interface TraderUpdatedEvent {
   ctidTraderAccountId: number;
   trader: Trader;
 }
 
+/** Position margin update event. */
 export interface MarginChangedEvent {
   ctidTraderAccountId: number;
   positionId: number;
@@ -377,24 +459,29 @@ export interface MarginChangedEvent {
   moneyDigits?: number;
 }
 
+/** Access token invalidation event. */
 export interface TokenInvalidatedEvent {
   ctidTraderAccountIds: number[];
   reason?: string;
 }
 
+/** Client disconnected by server. */
 export interface ClientDisconnectEvent {
   reason?: string;
 }
 
+/** Specific account disconnected. */
 export interface AccountDisconnectEvent {
   ctidTraderAccountId: number;
 }
 
+/** Symbol metadata changed by broker. */
 export interface SymbolChangedEvent {
   ctidTraderAccountId: number;
   symbolId: number[];
 }
 
+/** Order book update event. */
 export interface DepthEvent {
   ctidTraderAccountId: number;
   symbolId: number;
@@ -402,30 +489,38 @@ export interface DepthEvent {
   deletedQuotes?: number[];
 }
 
+/** Trailing stop loss price movement event. */
 export interface TrailingSLChangedEvent {
   ctidTraderAccountId: number;
   positionId: number;
   orderId: number;
   stopPrice: number;
+  /** Unix timestamp in milliseconds */
   utcLastUpdateTimestamp: number;
 }
 
+/** Margin call threshold crossed event. */
 export interface MarginCallEvent {
   ctidTraderAccountId: number;
   marginCall: MarginCall;
 }
 
+/** Error response payload from cTrader API. */
 export interface OAErrorPayload {
   ctidTraderAccountId?: number;
   errorCode: string;
   description?: string;
+  /** Unix timestamp in milliseconds when maintenance ends */
   maintenanceEndTimestamp?: number;
+  /** Retry delay in milliseconds */
   retryAfter?: number;
 }
 
+/** OAuth token pair (access + refresh). */
 export interface TokenPair {
   accessToken: string;
   tokenType: string;
+  /** Token lifetime in seconds */
   expiresIn: number;
   refreshToken: string;
 }

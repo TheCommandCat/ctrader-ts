@@ -1,0 +1,237 @@
+# ctrader-ts — TypeScript Client for cTrader Open API
+
+> Unofficial community library. Not affiliated with Spotware.
+> Protocol: JSON WebSocket on port 5036 (demo.ctraderapi.com / live.ctraderapi.com).
+
+## Quick Start
+
+```ts
+import { connect } from "ctrader-ts";
+
+const ct = await connect(); // reads ~/.config/ctrader-ts/config.json + env vars, connects, authenticates
+const pos = await ct.buy("EURUSD", { lots: 0.1, sl: { pips: 50 }, tp: { equity: 0.02 } });
+await ct.close(pos.positionId);
+ct.disconnect();
+```
+
+Credentials resolution order: stored config → env vars (CTRADER_CLIENT_ID, CTRADER_CLIENT_SECRET, CTRADER_ACCESS_TOKEN, CTRADER_ACCOUNT_ID, CTRADER_ENVIRONMENT) → overrides passed to `connect()`.
+
+## Architecture
+
+```
+connect()            → CTrader (high-level, human-friendly)
+  └─ CTrader
+       ├─ connection   → CTraderConnection (WebSocket, heartbeat, reconnect)
+       └─ raw
+            ├─ auth    → CTraderAuth (app/account auth, token management)
+            ├─ trading → CTraderTrading (order CRUD, execution events)
+            ├─ account → CTraderAccount (balance, history, margin)
+            └─ market  → CTraderMarket (symbols, spots, trendbars, depth)
+```
+
+Most users only need `connect()` + `CTrader` methods. The `raw.*` modules are for advanced/low-level use.
+
+## Key Concepts
+
+- **Volume**: The high-level API uses lots (0.01, 0.1, 1.0). The protocol uses units (1 lot = 100,000 units). Use `lotsToUnits()` / `unitsToLots()` for conversion.
+- **SL/TP**: Specified as `{ pips: N }`, `{ dollars: N }`, or `{ equity: fraction }`. The library auto-converts to protocol-level relative values.
+- **Symbol resolution**: Pass symbol names ("EURUSD") or numeric IDs. Names are resolved via an internal cache.
+- **Position IDs**: Every `buy()`/`sell()` returns the real cTrader `positionId`. Use it for `modify()`, `resize()`, `close()`.
+- **Prices**: Raw protocol prices are integers (divide by 10^digits for decimal). SpotPrice events include pre-computed `bidDecimal`/`askDecimal`.
+- **Timestamps**: All timestamps are Unix milliseconds.
+
+## CTrader — High-Level API
+
+### Account
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `getState()` | `AccountState` | Complete snapshot: balance, equity, margin, P&L, positions, orders. **Call this first.** |
+| `getTrader()` | `Trader` | Account profile: balance, leverage, type, access rights |
+| `getPositions(returnProtectionOrders?)` | `{ positions, orders }` | All open positions and pending orders |
+| `getDeals(from?, to?, maxRows?)` | `{ deals, hasMore }` | Deal (execution) history |
+| `getDealsByPosition(positionId, from?, to?)` | `Deal[]` | Deals for a specific position |
+| `getDealOffsets(dealId)` | `{ offsetBy, offsetting }` | Deal offset links |
+| `getOrders(from?, to?)` | `{ orders, hasMore }` | Order history |
+| `getCashFlow(from, to)` | `DepositWithdraw[]` | Deposit/withdrawal history (max 7 days) |
+| `getExpectedMargin(symbol, volumesInLots[])` | `{ margins, moneyDigits? }` | Margin estimate before trading |
+| `getUnrealizedPnl()` | `{ pnls, moneyDigits }` | Unrealised P&L for all positions |
+| `getDynamicLeverage(leverageId)` | `DynamicLeverage` | Dynamic leverage tiers |
+| `getMarginCalls()` | `MarginCall[]` | Margin call thresholds |
+| `updateMarginCall(marginCall)` | `void` | Update a margin call level |
+
+### Trading
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `buy(symbol, opts)` | `Position` | Market buy. Returns opened position. |
+| `sell(symbol, opts)` | `Position` | Market sell. Returns opened position. |
+| `buyLimit(symbol, opts)` | `ExecutionEvent` | Limit buy (fills at limitPrice or better) |
+| `sellLimit(symbol, opts)` | `ExecutionEvent` | Limit sell |
+| `buyStop(symbol, opts)` | `ExecutionEvent` | Stop buy (triggers at stopPrice) |
+| `sellStop(symbol, opts)` | `ExecutionEvent` | Stop sell |
+| `stopLimit(symbol, tradeSide, opts)` | `ExecutionEvent` | Stop-limit order |
+| `modify(positionId, { sl?, tp? })` | `void` | Modify SL/TP on an open position |
+| `resize(positionId, newLots)` | `ExecutionEvent \| undefined` | Change position volume to a new target |
+| `close(positionId, { lots? }?)` | `ExecutionEvent` | Close position (full or partial) |
+| `closeSymbol(symbol)` | `ExecutionEvent[]` | Close all positions on a symbol |
+| `closeAll()` | `ExecutionEvent[]` | Close every open position |
+| `modifyOrder(orderId, params)` | `void` | Modify a pending order |
+| `cancelOrder(orderId)` | `void` | Cancel a pending order |
+
+### Market Data
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `getSymbols(includeArchived?)` | `LightSymbol[]` | All available symbols (cached) |
+| `getSymbolDetails(symbolsOrIds[])` | `FullSymbol[]` | Full symbol details: spread, swap, commission, schedule |
+| `refreshSymbols()` | `void` | Force-refresh the symbol cache |
+| `watchSpots(symbols[], handler)` | `() => Promise<void>` | Stream live bid/ask. Returns unsubscribe fn. |
+| `watchDepth(symbols[], handler)` | `() => Promise<void>` | Stream level 2 / depth-of-market. Returns unsubscribe fn. |
+| `getTrendbars(symbol, params)` | `{ trendbars, hasMore }` | Historical OHLCV candles |
+| `getTickData(symbol, params)` | `{ ticks, hasMore }` | Historical tick data |
+
+### Events
+
+All return an unsubscribe function `() => void`.
+
+| Method | Event Type | When |
+|--------|-----------|------|
+| `onExecution(handler)` | `ExecutionEvent` | Order fill, cancel, modification |
+| `onOrderError(handler)` | `OrderErrorEvent` | Order rejection |
+| `onTrailingSLChanged(handler)` | `TrailingSLChangedEvent` | Trailing SL price moved |
+| `onTraderUpdated(handler)` | `TraderUpdatedEvent` | Balance/equity/settings change |
+| `onMarginChanged(handler)` | `MarginChangedEvent` | Position margin update |
+| `onMarginCallTrigger(handler)` | `MarginCallEvent` | Margin call threshold crossed |
+| `onSymbolChanged(handler)` | `SymbolChangedEvent` | Symbol metadata changed |
+| `onDepth(handler)` | `DepthEvent` | Order book update |
+| `onClientDisconnect(handler)` | `ClientDisconnectEvent` | Server dropped connection |
+| `onTokenInvalidated(handler)` | `TokenInvalidatedEvent` | Access token invalidated |
+| `onAccountDisconnect(handler)` | `AccountDisconnectEvent` | Account disconnected by server |
+
+### Connection
+
+| Property/Method | Type | Description |
+|----------------|------|-------------|
+| `state` | `ConnectionState` | Current: "connected" / "connecting" / "reconnecting" / "disconnected" |
+| `isConnected` | `boolean` | True when WebSocket is open |
+| `setAccount(accountId)` | `void` | Switch account without reconnecting |
+| `disconnect()` | `void` | Close connection, stop reconnecting |
+| `connection` | `CTraderConnection` | Raw WebSocket connection |
+
+## MarketOrderOptions
+
+```ts
+{
+  lots: number;               // Volume in lots (0.01, 0.1, 1.0)
+  sl?: SlTpSpec;              // Stop loss
+  tp?: SlTpSpec;              // Take profit
+  trailingStopLoss?: boolean; // Enable trailing SL
+  guaranteedStopLoss?: boolean;
+  label?: string;             // Bot label
+  comment?: string;           // Trade comment
+  clientOrderId?: string;     // Your tracking ID
+}
+```
+
+## SlTpSpec — Three Ways to Specify SL/TP
+
+```ts
+{ pips: 50 }        // 50 pips from entry (symbol-aware: handles JPY, gold, etc.)
+{ dollars: 25 }     // Risk/reward exactly $25
+{ equity: 0.02 }    // Risk 2% of account equity
+```
+
+## Error Handling
+
+```ts
+import { CTraderError, RequestTimeoutError, NotConnectedError } from "ctrader-ts";
+
+try {
+  await ct.buy("EURUSD", { lots: 0.1 });
+} catch (e) {
+  if (e instanceof CTraderError) {
+    e.code;                // Machine-readable error code string
+    e.description;         // Human-readable description
+    e.isAuthError;         // Token expired, not authenticated, etc.
+    e.isRateLimit;         // REQUEST_FREQUENCY_EXCEEDED — wait e.retryAfter ms
+    e.isMaintenance;       // Server under maintenance — try later
+    e.retryAfter;          // ms to wait (rate limit only)
+    e.maintenanceEndTimestamp; // Unix ms when maintenance ends
+  }
+  if (e instanceof RequestTimeoutError) { /* request took too long */ }
+  if (e instanceof NotConnectedError) { /* WebSocket not connected */ }
+}
+```
+
+## Reconnection
+
+Automatic with exponential backoff (2s → 60s max). On reconnect:
+1. Re-authenticates (app + account)
+2. Restores all active spot/depth/trendbar subscriptions
+
+No user action needed.
+
+## Enums (commonly used)
+
+| Enum | Values | Description |
+|------|--------|-------------|
+| `TradeSide` | BUY, SELL | Trade direction |
+| `OrderType` | MARKET, LIMIT, STOP, STOP_LIMIT, MARKET_RANGE | Order type |
+| `TrendbarPeriod` | M1, M2, M3, M4, M5, M10, M15, M30, H1, H4, H12, D1, W1, MN1 | Candle period |
+| `QuoteType` | BID, ASK | Price type for tick data |
+| `ExecutionType` | ORDER_FILLED, ORDER_REPLACED, ORDER_CANCELLED, etc. | What happened in execution |
+| `PositionStatus` | OPEN, CLOSED, CREATED, ERROR | Position lifecycle |
+| `OrderStatus` | ACCEPTED, FILLED, REJECTED, EXPIRED, CANCELLED | Order lifecycle |
+| `AccountType` | HEDGED, NETTED, SPREAD_BETTING | Account mode |
+| `AccessRights` | FULL_ACCESS, CLOSE_ONLY, NO_TRADING, NO_LOGIN | Account access level |
+| `TimeInForce` | GOOD_TILL_DATE, GOOD_TILL_CANCEL, IMMEDIATE_OR_CANCEL, FILL_OR_KILL | Order duration |
+
+## Utility Functions
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `lotsToUnits(lots)` | `(number) → number` | Convert lots to protocol units (× 100,000) |
+| `unitsToLots(units)` | `(number) → number` | Convert protocol units to lots (÷ 100,000) |
+| `pipsToRelative(pips, pipPosition?)` | `(number, number?) → number` | Convert pips to protocol relative SL/TP units |
+
+## CLI
+
+```bash
+ctrader-ts auth                                    # Interactive OAuth setup
+ctrader-ts state                                   # Account snapshot
+ctrader-ts positions                               # Open positions
+ctrader-ts buy EURUSD 0.1 --sl-pips 50             # Market buy
+ctrader-ts sell USDJPY 0.1 --sl-dollars 30         # Market sell
+ctrader-ts close 12345678                           # Close position
+ctrader-ts close 12345678 --lots 0.05               # Partial close
+ctrader-ts modify 12345678 --sl-pips 30             # Modify SL/TP
+ctrader-ts resize 12345678 0.2                      # Resize position
+ctrader-ts watch EURUSD GBPUSD                      # Live prices
+ctrader-ts bars EURUSD H1 2024-01-01 2024-12-31    # Historical candles
+ctrader-ts state --json                             # JSON output for piping
+```
+
+## File Structure
+
+```
+src/
+├── index.ts          — Package entry point, re-exports everything
+├── connect.ts        — connect() convenience function (auth + connect in one call)
+├── client.ts         — CTrader class (high-level API with human-friendly units)
+├── connection.ts     — CTraderConnection (WebSocket, heartbeat, reconnect)
+├── config.ts         — Credential resolution (file → env → overrides)
+├── symbol-cache.ts   — Symbol name → ID resolution cache
+├── helpers.ts        — SL/TP spec resolution (pips/dollars/equity → protocol values)
+├── errors.ts         — CTraderError, RequestTimeoutError, NotConnectedError
+├── enums.ts          — All protocol enums (PayloadType, OrderType, TradeSide, etc.)
+├── types.ts          — All TypeScript interfaces (Position, Order, Deal, events, etc.)
+└── modules/
+    ├── auth.ts       — CTraderAuth (app auth, account auth, token ops)
+    ├── trading.ts    — CTraderTrading (order CRUD, execution events)
+    ├── account.ts    — CTraderAccount (balance, history, margin)
+    └── market.ts     — CTraderMarket (symbols, spots, trendbars, depth)
+
+cli/
+└── index.ts          — CLI entry point (commander-based)
+```

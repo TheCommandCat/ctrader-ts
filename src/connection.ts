@@ -52,16 +52,25 @@ export type ConnectionEvent = "stateChange" | "error" | "message";
 type ConnectionEventHandler = (data: unknown) => void;
 
 export interface CTraderConnectionConfig {
-  /** Hostname, e.g. "demo.ctraderapi.com" */
+  /** Hostname or IP address, e.g., "demo.ctraderapi.com" */
   host: string;
-  /** Port — default 5035 */
+  /** Port number — default 5035 for cTrader Open API over TLS/TCP */
   port?: number;
+  /** Maximum number of reconnection attempts (0 = unlimited) */
   maxReconnectAttempts?: number;
+  /** Timeout in milliseconds for individual requests (default 15000ms) */
   requestTimeoutMs?: number;
-  /** Called after TCP reconnects (not initial connect). Use for re-auth + subscription restore. */
+  /** Called after TLS/TCP reconnects (not initial connect). Use for re-auth + subscription restore. */
   onReconnect?: () => Promise<void>;
 }
 
+/**
+ * Low-level TLS/TCP connection to the cTrader Open API (port 5035).
+ * Handles connect/disconnect, heartbeat, automatic reconnection,
+ * request/response matching, and payload-based event dispatch.
+ *
+ * Most users should use {@link CTrader} (via `connect()`) instead of this class directly.
+ */
 export class CTraderConnection {
   private socket: tls.TLSSocket | null = null;
   private readonly host: string;
@@ -104,16 +113,22 @@ export class CTraderConnection {
     this.onReconnect = config.onReconnect;
   }
 
+  /** Current connection lifecycle state. */
   get state(): ConnectionState {
     return this._state;
   }
 
+  /** True when the TLS/TCP socket is established and ready for messages. */
   get isConnected(): boolean {
     return this._state.status === "connected" || this._state.status === "ready";
   }
 
   // ─── Connect ────────────────────────────────────────────────────────────
 
+  /**
+   * Establish a TLS/TCP connection to the cTrader API.
+   * Resolves when the connection is established, rejects on failure.
+   */
   connect(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       if (
@@ -167,6 +182,10 @@ export class CTraderConnection {
     });
   }
 
+  /**
+   * Close the TLS/TCP connection and stop automatic reconnection.
+   * All pending requests are rejected.
+   */
   disconnect(): void {
     this.shouldReconnect = false;
 
@@ -188,6 +207,10 @@ export class CTraderConnection {
 
   // ─── Send ───────────────────────────────────────────────────────────────
 
+  /**
+   * Send a one-way message (fire-and-forget) over the TLS/TCP connection.
+   * Returns the generated clientMsgId for tracking.
+   */
   send(payloadType: number, payload?: Record<string, unknown>): string {
     if (this.socket === null || this.socket.destroyed) {
       throw new NotConnectedError();
@@ -200,6 +223,10 @@ export class CTraderConnection {
     return clientMsgId;
   }
 
+  /**
+   * Send a request and wait for the matching response.
+   * Rejects on timeout or API error.
+   */
   request(
     payloadType: number,
     payload: Record<string, unknown>,
@@ -281,6 +308,10 @@ export class CTraderConnection {
 
   // ─── Event handlers ─────────────────────────────────────────────────────
 
+  /**
+   * Subscribe to a specific payload type.
+   * Returns an unsubscribe function.
+   */
   on(payloadType: number, handler: PayloadHandler): () => void {
     let handlers = this.payloadHandlers.get(payloadType);
     if (handlers === undefined) {
@@ -291,10 +322,15 @@ export class CTraderConnection {
     return () => this.off(payloadType, handler);
   }
 
+  /** Remove a specific handler for a payload type. */
   off(payloadType: number, handler: PayloadHandler): void {
     this.payloadHandlers.get(payloadType)?.delete(handler);
   }
 
+  /**
+   * Subscribe to connection lifecycle events (stateChange, error, message).
+   * Returns an unsubscribe function.
+   */
   onEvent(event: ConnectionEvent, handler: ConnectionEventHandler): () => void {
     let handlers = this.eventHandlers.get(event);
     if (handlers === undefined) {
@@ -305,6 +341,7 @@ export class CTraderConnection {
     return () => this.offEvent(event, handler);
   }
 
+  /** Remove a specific connection event handler. */
   offEvent(event: ConnectionEvent, handler: ConnectionEventHandler): void {
     this.eventHandlers.get(event)?.delete(handler);
   }

@@ -46,8 +46,8 @@ export interface ConnectOptions extends PartialConfig {
  *
  * @example
  * const ct = await connect();
- * const pos = await ct.buy("EURUSD", { volume: 0.01 });
- * await ct.close(pos.position!);
+ * const pos = await ct.buy("EURUSD", { lots: 0.01 });
+ * await ct.close(pos.positionId);
  *
  * @example
  * const ct = await connect({ environment: "live" });

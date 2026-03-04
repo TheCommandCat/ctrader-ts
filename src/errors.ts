@@ -1,3 +1,4 @@
+/** Error returned by the cTrader Open API — includes a machine-readable code and human description. */
 export class CTraderError extends Error {
 	readonly code: string;
 	readonly description: string;
@@ -33,6 +34,7 @@ export class CTraderError extends Error {
 	}
 }
 
+/** Thrown when a request does not receive a response within the configured timeout. */
 export class RequestTimeoutError extends Error {
 	readonly payloadType: number;
 	readonly clientMsgId: string;
@@ -45,6 +47,7 @@ export class RequestTimeoutError extends Error {
 	}
 }
 
+/** Thrown when an operation is attempted while the WebSocket is not connected. */
 export class NotConnectedError extends Error {
 	constructor() {
 		super("Not connected to cTrader API");
