@@ -1,5 +1,16 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.4.2/schema.json",
+	"files": {
+		"includes": [
+			"src/**",
+			"cli/**",
+			"bin/**",
+			"examples/**",
+			"!src/proto",
+			"!dist",
+			"!node_modules"
+		]
+	},
 	"formatter": {
 		"enabled": true,
 		"indentStyle": "tab",
@@ -11,10 +22,13 @@
 			"recommended": true,
 			"style": {
 				"useConst": "error",
-				"noVar": "error"
+				"noNonNullAssertion": "off"
 			},
 			"correctness": {
 				"noUnusedVariables": "error"
+			},
+			"suspicious": {
+				"noExplicitAny": "off"
 			}
 		}
 	},

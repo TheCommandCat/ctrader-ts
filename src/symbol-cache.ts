@@ -14,7 +14,10 @@ export class SymbolCache {
 		if (typeof symbolOrId === "number") return symbolOrId;
 		const map = await this.getNameToId();
 		const id = map.get(symbolOrId.toUpperCase());
-		if (id === undefined) throw new Error(`Symbol not found: "${symbolOrId}". Call client.refreshSymbols() to update the cache.`);
+		if (id === undefined)
+			throw new Error(
+				`Symbol not found: "${symbolOrId}". Call client.refreshSymbols() to update the cache.`,
+			);
 		return id;
 	}
 

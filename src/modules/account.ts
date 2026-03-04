@@ -64,19 +64,22 @@ export class CTraderAccount {
 		const res = await this.connection.request(PayloadType.TRADER_REQ, {
 			ctidTraderAccountId: this.accountId,
 		});
-		return res["trader"] as Trader;
+		return res.trader as Trader;
 	}
 
 	/**
 	 * Sync local state with server — get current positions and orders
 	 */
-	async reconcile(returnProtectionOrders?: boolean): Promise<{ positions: Position[]; orders: Order[] }> {
+	async reconcile(
+		returnProtectionOrders?: boolean,
+	): Promise<{ positions: Position[]; orders: Order[] }> {
 		const payload: Record<string, unknown> = { ctidTraderAccountId: this.accountId };
-		if (returnProtectionOrders !== undefined) payload["returnProtectionOrders"] = returnProtectionOrders;
+		if (returnProtectionOrders !== undefined)
+			payload.returnProtectionOrders = returnProtectionOrders;
 		const res = await this.connection.request(PayloadType.RECONCILE_REQ, payload);
 		return {
-			positions: (res["position"] as Position[] | undefined) ?? [],
-			orders: (res["order"] as Order[] | undefined) ?? [],
+			positions: (res.position as Position[] | undefined) ?? [],
+			orders: (res.order as Order[] | undefined) ?? [],
 		};
 	}
 
@@ -85,41 +88,46 @@ export class CTraderAccount {
 	 */
 	async getDeals(params: DealListParams = {}): Promise<{ deals: Deal[]; hasMore: boolean }> {
 		const payload: Record<string, unknown> = { ctidTraderAccountId: this.accountId };
-		if (params.fromTimestamp !== undefined) payload["fromTimestamp"] = params.fromTimestamp;
-		if (params.toTimestamp !== undefined) payload["toTimestamp"] = params.toTimestamp;
-		if (params.maxRows !== undefined) payload["maxRows"] = params.maxRows;
+		if (params.fromTimestamp !== undefined) payload.fromTimestamp = params.fromTimestamp;
+		if (params.toTimestamp !== undefined) payload.toTimestamp = params.toTimestamp;
+		if (params.maxRows !== undefined) payload.maxRows = params.maxRows;
 		const res = await this.connection.request(PayloadType.DEAL_LIST_REQ, payload);
 		return {
-			deals: (res["deal"] as Deal[] | undefined) ?? [],
-			hasMore: (res["hasMore"] as boolean | undefined) ?? false,
+			deals: (res.deal as Deal[] | undefined) ?? [],
+			hasMore: (res.hasMore as boolean | undefined) ?? false,
 		};
 	}
 
 	/**
 	 * Get deals for a specific position
 	 */
-	async getDealsByPosition(positionId: number, params: TimeRangeParams = {}): Promise<{ deals: Deal[]; hasMore: boolean }> {
+	async getDealsByPosition(
+		positionId: number,
+		params: TimeRangeParams = {},
+	): Promise<{ deals: Deal[]; hasMore: boolean }> {
 		const payload: Record<string, unknown> = { ctidTraderAccountId: this.accountId, positionId };
-		if (params.fromTimestamp !== undefined) payload["fromTimestamp"] = params.fromTimestamp;
-		if (params.toTimestamp !== undefined) payload["toTimestamp"] = params.toTimestamp;
+		if (params.fromTimestamp !== undefined) payload.fromTimestamp = params.fromTimestamp;
+		if (params.toTimestamp !== undefined) payload.toTimestamp = params.toTimestamp;
 		const res = await this.connection.request(PayloadType.DEAL_LIST_BY_POSITION_REQ, payload);
 		return {
-			deals: (res["deal"] as Deal[] | undefined) ?? [],
-			hasMore: (res["hasMore"] as boolean | undefined) ?? false,
+			deals: (res.deal as Deal[] | undefined) ?? [],
+			hasMore: (res.hasMore as boolean | undefined) ?? false,
 		};
 	}
 
 	/**
 	 * Get offset information for a specific deal
 	 */
-	async getDealOffsets(dealId: number): Promise<{ offsetBy: DealOffset[]; offsetting: DealOffset[] }> {
+	async getDealOffsets(
+		dealId: number,
+	): Promise<{ offsetBy: DealOffset[]; offsetting: DealOffset[] }> {
 		const res = await this.connection.request(PayloadType.DEAL_OFFSET_LIST_REQ, {
 			ctidTraderAccountId: this.accountId,
 			dealId,
 		});
 		return {
-			offsetBy: (res["offsetBy"] as DealOffset[] | undefined) ?? [],
-			offsetting: (res["offsetting"] as DealOffset[] | undefined) ?? [],
+			offsetBy: (res.offsetBy as DealOffset[] | undefined) ?? [],
+			offsetting: (res.offsetting as DealOffset[] | undefined) ?? [],
 		};
 	}
 
@@ -128,12 +136,12 @@ export class CTraderAccount {
 	 */
 	async getOrders(params: OrderListParams = {}): Promise<{ orders: Order[]; hasMore: boolean }> {
 		const payload: Record<string, unknown> = { ctidTraderAccountId: this.accountId };
-		if (params.fromTimestamp !== undefined) payload["fromTimestamp"] = params.fromTimestamp;
-		if (params.toTimestamp !== undefined) payload["toTimestamp"] = params.toTimestamp;
+		if (params.fromTimestamp !== undefined) payload.fromTimestamp = params.fromTimestamp;
+		if (params.toTimestamp !== undefined) payload.toTimestamp = params.toTimestamp;
 		const res = await this.connection.request(PayloadType.ORDER_LIST_REQ, payload);
 		return {
-			orders: (res["order"] as Order[] | undefined) ?? [],
-			hasMore: (res["hasMore"] as boolean | undefined) ?? false,
+			orders: (res.order as Order[] | undefined) ?? [],
+			hasMore: (res.hasMore as boolean | undefined) ?? false,
 		};
 	}
 
@@ -146,22 +154,25 @@ export class CTraderAccount {
 			orderId,
 		});
 		return {
-			order: res["order"] as Order,
-			deals: (res["deal"] as Deal[] | undefined) ?? [],
+			order: res.order as Order,
+			deals: (res.deal as Deal[] | undefined) ?? [],
 		};
 	}
 
 	/**
 	 * Get orders for a specific position
 	 */
-	async getOrdersByPosition(positionId: number, params: TimeRangeParams = {}): Promise<{ orders: Order[]; hasMore: boolean }> {
+	async getOrdersByPosition(
+		positionId: number,
+		params: TimeRangeParams = {},
+	): Promise<{ orders: Order[]; hasMore: boolean }> {
 		const payload: Record<string, unknown> = { ctidTraderAccountId: this.accountId, positionId };
-		if (params.fromTimestamp !== undefined) payload["fromTimestamp"] = params.fromTimestamp;
-		if (params.toTimestamp !== undefined) payload["toTimestamp"] = params.toTimestamp;
+		if (params.fromTimestamp !== undefined) payload.fromTimestamp = params.fromTimestamp;
+		if (params.toTimestamp !== undefined) payload.toTimestamp = params.toTimestamp;
 		const res = await this.connection.request(PayloadType.ORDER_LIST_BY_POSITION_REQ, payload);
 		return {
-			orders: (res["order"] as Order[] | undefined) ?? [],
-			hasMore: (res["hasMore"] as boolean | undefined) ?? false,
+			orders: (res.order as Order[] | undefined) ?? [],
+			hasMore: (res.hasMore as boolean | undefined) ?? false,
 		};
 	}
 
@@ -174,35 +185,41 @@ export class CTraderAccount {
 			fromTimestamp,
 			toTimestamp,
 		});
-		return (res["depositWithdraw"] as DepositWithdraw[] | undefined) ?? [];
+		return (res.depositWithdraw as DepositWithdraw[] | undefined) ?? [];
 	}
 
 	/**
 	 * Get expected margin for volumes on a symbol
 	 */
-	async getExpectedMargin(symbolId: number, volumes: number[]): Promise<{ margins: ExpectedMargin[]; moneyDigits?: number }> {
+	async getExpectedMargin(
+		symbolId: number,
+		volumes: number[],
+	): Promise<{ margins: ExpectedMargin[]; moneyDigits?: number }> {
 		const res = await this.connection.request(PayloadType.EXPECTED_MARGIN_REQ, {
 			ctidTraderAccountId: this.accountId,
 			symbolId,
 			volume: volumes,
 		});
 		const result: { margins: ExpectedMargin[]; moneyDigits?: number } = {
-			margins: (res["margin"] as ExpectedMargin[] | undefined) ?? [],
+			margins: (res.margin as ExpectedMargin[] | undefined) ?? [],
 		};
-		if (res["moneyDigits"] !== undefined) result.moneyDigits = res["moneyDigits"] as number;
+		if (res.moneyDigits !== undefined) result.moneyDigits = res.moneyDigits as number;
 		return result;
 	}
 
 	/**
 	 * Get unrealized PnL for all open positions
 	 */
-	async getPositionUnrealizedPnl(): Promise<{ pnls: PositionUnrealizedPnL[]; moneyDigits: number }> {
+	async getPositionUnrealizedPnl(): Promise<{
+		pnls: PositionUnrealizedPnL[];
+		moneyDigits: number;
+	}> {
 		const res = await this.connection.request(PayloadType.GET_POSITION_UNREALIZED_PNL_REQ, {
 			ctidTraderAccountId: this.accountId,
 		});
 		return {
-			pnls: (res["positionUnrealizedPnL"] as PositionUnrealizedPnL[] | undefined) ?? [],
-			moneyDigits: res["moneyDigits"] as number,
+			pnls: (res.positionUnrealizedPnL as PositionUnrealizedPnL[] | undefined) ?? [],
+			moneyDigits: res.moneyDigits as number,
 		};
 	}
 
@@ -214,7 +231,7 @@ export class CTraderAccount {
 			ctidTraderAccountId: this.accountId,
 			leverageId,
 		});
-		return res["leverage"] as DynamicLeverage;
+		return res.leverage as DynamicLeverage;
 	}
 
 	/**
@@ -224,7 +241,7 @@ export class CTraderAccount {
 		const res = await this.connection.request(PayloadType.MARGIN_CALL_LIST_REQ, {
 			ctidTraderAccountId: this.accountId,
 		});
-		return (res["marginCall"] as MarginCall[] | undefined) ?? [];
+		return (res.marginCall as MarginCall[] | undefined) ?? [];
 	}
 
 	/**

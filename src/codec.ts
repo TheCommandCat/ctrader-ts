@@ -15,8 +15,8 @@
  * framed bytes ready for the socket.
  */
 
-import { ProtoMessage, ProtoHeartbeatEvent } from "./proto/messages.js";
 import { PayloadType } from "./enums.js";
+import { ProtoHeartbeatEvent, ProtoMessage } from "./proto/messages.js";
 
 // ---------------------------------------------------------------------------
 // Payload-type → Protobuf class registry
@@ -25,11 +25,8 @@ import { PayloadType } from "./enums.js";
 import * as pb from "./proto/messages.js";
 
 interface PbMessageStatic {
-  encode(
-    message: Record<string, unknown>,
-    writer?: unknown,
-  ): { finish(): Uint8Array };
-  decode(reader: Uint8Array, length?: number): Record<string, unknown>;
+	encode(message: Record<string, unknown>, writer?: unknown): { finish(): Uint8Array };
+	decode(reader: Uint8Array, length?: number): Record<string, unknown>;
 }
 
 const registry = new Map<number, PbMessageStatic>();
@@ -37,37 +34,32 @@ const registry = new Map<number, PbMessageStatic>();
 // Scan every export from the generated module. Each message class has
 // static encode/decode methods and instances carry a default payloadType.
 for (const key of Object.keys(pb)) {
-  const candidate = (pb as Record<string, unknown>)[key];
-  if (
-    candidate != null &&
-    typeof candidate === "function" &&
-    "encode" in candidate &&
-    "decode" in candidate &&
-    typeof (candidate as Record<string, unknown>).encode === "function" &&
-    typeof (candidate as Record<string, unknown>).decode === "function"
-  ) {
-    try {
-      const instance = new (candidate as unknown as new () => Record<
-        string,
-        unknown
-      >)();
-      const pt = instance["payloadType"];
-      if (typeof pt === "number" && pt > 0) {
-        registry.set(pt, candidate as unknown as PbMessageStatic);
-      }
-    } catch {
-      // Not a constructable message class — skip
-    }
-  }
+	const candidate = (pb as Record<string, unknown>)[key];
+	if (
+		candidate != null &&
+		typeof candidate === "function" &&
+		"encode" in candidate &&
+		"decode" in candidate &&
+		typeof (candidate as Record<string, unknown>).encode === "function" &&
+		typeof (candidate as Record<string, unknown>).decode === "function"
+	) {
+		try {
+			const instance = new (candidate as unknown as new () => Record<string, unknown>)();
+			const pt = instance.payloadType;
+			if (typeof pt === "number" && pt > 0) {
+				registry.set(pt, candidate as unknown as PbMessageStatic);
+			}
+		} catch {
+			// Not a constructable message class — skip
+		}
+	}
 }
 
 /**
  * Look up the Protobuf message class for a given payloadType.
  */
-export function getMessageClass(
-  payloadType: number,
-): PbMessageStatic | undefined {
-  return registry.get(payloadType);
+export function getMessageClass(payloadType: number): PbMessageStatic | undefined {
+	return registry.get(payloadType);
 }
 
 // ---------------------------------------------------------------------------
@@ -83,48 +75,48 @@ export function getMessageClass(
  * @returns Buffer with [4-byte length prefix][ProtoMessage bytes]
  */
 export function encodeMessage(
-  payloadType: number,
-  payload?: Record<string, unknown>,
-  clientMsgId?: string,
+	payloadType: number,
+	payload?: Record<string, unknown>,
+	clientMsgId?: string,
 ): Buffer {
-  const envelope: Record<string, unknown> = { payloadType };
-  if (clientMsgId) envelope.clientMsgId = clientMsgId;
+	const envelope: Record<string, unknown> = { payloadType };
+	if (clientMsgId) envelope.clientMsgId = clientMsgId;
 
-  if (payload !== undefined) {
-    const msgClass = registry.get(payloadType);
-    if (msgClass) {
-      const innerWriter = msgClass.encode(payload);
-      envelope.payload = innerWriter.finish();
-    }
-  }
+	if (payload !== undefined) {
+		const msgClass = registry.get(payloadType);
+		if (msgClass) {
+			const innerWriter = msgClass.encode(payload);
+			envelope.payload = innerWriter.finish();
+		}
+	}
 
-  const protoBytes = ProtoMessage.encode(
-    envelope as Parameters<typeof ProtoMessage.encode>[0],
-  ).finish();
-  const frame = Buffer.alloc(4 + protoBytes.length);
-  frame.writeUInt32BE(protoBytes.length, 0);
-  frame.set(protoBytes, 4);
-  return frame;
+	const protoBytes = ProtoMessage.encode(
+		envelope as Parameters<typeof ProtoMessage.encode>[0],
+	).finish();
+	const frame = Buffer.alloc(4 + protoBytes.length);
+	frame.writeUInt32BE(protoBytes.length, 0);
+	frame.set(protoBytes, 4);
+	return frame;
 }
 
 /**
  * Encode a heartbeat event (no inner payload, no clientMsgId).
  */
 export function encodeHeartbeat(): Buffer {
-  const heartbeatBytes = ProtoHeartbeatEvent.encode(
-    {} as Parameters<typeof ProtoHeartbeatEvent.encode>[0],
-  ).finish();
-  const envelope = {
-    payloadType: PayloadType.HEARTBEAT_EVENT,
-    payload: heartbeatBytes,
-  };
-  const protoBytes = ProtoMessage.encode(
-    envelope as Parameters<typeof ProtoMessage.encode>[0],
-  ).finish();
-  const frame = Buffer.alloc(4 + protoBytes.length);
-  frame.writeUInt32BE(protoBytes.length, 0);
-  frame.set(protoBytes, 4);
-  return frame;
+	const heartbeatBytes = ProtoHeartbeatEvent.encode(
+		{} as Parameters<typeof ProtoHeartbeatEvent.encode>[0],
+	).finish();
+	const envelope = {
+		payloadType: PayloadType.HEARTBEAT_EVENT,
+		payload: heartbeatBytes,
+	};
+	const protoBytes = ProtoMessage.encode(
+		envelope as Parameters<typeof ProtoMessage.encode>[0],
+	).finish();
+	const frame = Buffer.alloc(4 + protoBytes.length);
+	frame.writeUInt32BE(protoBytes.length, 0);
+	frame.set(protoBytes, 4);
+	return frame;
 }
 
 // ---------------------------------------------------------------------------
@@ -134,21 +126,19 @@ export function encodeHeartbeat(): Buffer {
 /**
  * Detect a protobufjs Long object (has low/high/unsigned properties).
  */
-function isLong(
-  value: unknown,
-): value is {
-  low: number;
-  high: number;
-  unsigned: boolean;
-  toNumber(): number;
+function isLong(value: unknown): value is {
+	low: number;
+	high: number;
+	unsigned: boolean;
+	toNumber(): number;
 } {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    "low" in (value as Record<string, unknown>) &&
-    "high" in (value as Record<string, unknown>) &&
-    "unsigned" in (value as Record<string, unknown>)
-  );
+	return (
+		value !== null &&
+		typeof value === "object" &&
+		"low" in (value as Record<string, unknown>) &&
+		"high" in (value as Record<string, unknown>) &&
+		"unsigned" in (value as Record<string, unknown>)
+	);
 }
 
 /**
@@ -157,17 +147,17 @@ function isLong(
  * fields as Long objects, but cTrader values always fit in JS safe integers.
  */
 function convertLongs(obj: unknown): unknown {
-  if (isLong(obj)) return obj.toNumber();
-  if (obj === null || obj === undefined) return obj;
-  if (Array.isArray(obj)) return obj.map(convertLongs);
-  if (typeof obj === "object") {
-    const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      result[key] = convertLongs(value);
-    }
-    return result;
-  }
-  return obj;
+	if (isLong(obj)) return obj.toNumber();
+	if (obj === null || obj === undefined) return obj;
+	if (Array.isArray(obj)) return obj.map(convertLongs);
+	if (typeof obj === "object") {
+		const result: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+			result[key] = convertLongs(value);
+		}
+		return result;
+	}
+	return obj;
 }
 
 // ---------------------------------------------------------------------------
@@ -175,29 +165,26 @@ function convertLongs(obj: unknown): unknown {
 // ---------------------------------------------------------------------------
 
 export interface DecodedMessage {
-  payloadType: number;
-  clientMsgId: string | undefined;
-  payload: Record<string, unknown>;
+	payloadType: number;
+	clientMsgId: string | undefined;
+	payload: Record<string, unknown>;
 }
 
 /**
  * Decode a ProtoMessage envelope from raw bytes (without the 4-byte length prefix).
  */
 export function decodeMessage(data: Uint8Array): DecodedMessage {
-  const envelope = ProtoMessage.decode(data);
-  const payloadType = envelope.payloadType;
-  const clientMsgId = envelope.clientMsgId || undefined;
+	const envelope = ProtoMessage.decode(data);
+	const payloadType = envelope.payloadType;
+	const clientMsgId = envelope.clientMsgId || undefined;
 
-  let payload: Record<string, unknown> = {};
-  if (envelope.payload && envelope.payload.length > 0) {
-    const msgClass = registry.get(payloadType);
-    if (msgClass) {
-      payload = convertLongs(msgClass.decode(envelope.payload)) as Record<
-        string,
-        unknown
-      >;
-    }
-  }
+	let payload: Record<string, unknown> = {};
+	if (envelope.payload && envelope.payload.length > 0) {
+		const msgClass = registry.get(payloadType);
+		if (msgClass) {
+			payload = convertLongs(msgClass.decode(envelope.payload)) as Record<string, unknown>;
+		}
+	}
 
-  return { payloadType, clientMsgId, payload };
+	return { payloadType, clientMsgId, payload };
 }

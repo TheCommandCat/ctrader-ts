@@ -23,7 +23,10 @@ export class CTraderAuth {
 	 * Authenticate a specific trading account. Requires app auth first.
 	 */
 	async authenticateAccount(ctidTraderAccountId: number, accessToken: string): Promise<void> {
-		await this.connection.request(PayloadType.ACCOUNT_AUTH_REQ, { ctidTraderAccountId, accessToken });
+		await this.connection.request(PayloadType.ACCOUNT_AUTH_REQ, {
+			ctidTraderAccountId,
+			accessToken,
+		});
 	}
 
 	/**
@@ -43,8 +46,10 @@ export class CTraderAuth {
 	 * Get all trading accounts associated with an access token
 	 */
 	async getAccountsByToken(accessToken: string): Promise<CtidTraderAccount[]> {
-		const res = await this.connection.request(PayloadType.GET_ACCOUNTS_BY_TOKEN_REQ, { accessToken });
-		const accounts = res["ctidTraderAccount"];
+		const res = await this.connection.request(PayloadType.GET_ACCOUNTS_BY_TOKEN_REQ, {
+			accessToken,
+		});
+		const accounts = res.ctidTraderAccount;
 		return Array.isArray(accounts) ? (accounts as CtidTraderAccount[]) : [];
 	}
 
@@ -53,7 +58,7 @@ export class CTraderAuth {
 	 */
 	async getCtidProfile(accessToken: string): Promise<CtidProfile> {
 		const res = await this.connection.request(PayloadType.GET_CTID_PROFILE_REQ, { accessToken });
-		return res["profile"] as CtidProfile;
+		return res.profile as CtidProfile;
 	}
 
 	/**
@@ -62,10 +67,10 @@ export class CTraderAuth {
 	async refreshToken(refreshToken: string): Promise<TokenPair> {
 		const res = await this.connection.request(PayloadType.REFRESH_TOKEN_REQ, { refreshToken });
 		return {
-			accessToken: res["accessToken"] as string,
-			tokenType: res["tokenType"] as string,
-			expiresIn: res["expiresIn"] as number,
-			refreshToken: res["refreshToken"] as string,
+			accessToken: res.accessToken as string,
+			tokenType: res.tokenType as string,
+			expiresIn: res.expiresIn as number,
+			refreshToken: res.refreshToken as string,
 		};
 	}
 
@@ -81,6 +86,6 @@ export class CTraderAuth {
 	 */
 	async getApiVersion(): Promise<string> {
 		const res = await this.connection.request(PayloadType.VERSION_REQ, {});
-		return res["version"] as string;
+		return res.version as string;
 	}
 }

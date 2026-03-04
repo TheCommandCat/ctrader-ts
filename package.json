@@ -1,91 +1,91 @@
 {
-  "name": "ctrader-ts",
-  "version": "0.1.11",
-  "description": "TypeScript client for the cTrader Open API — trade forex/CFDs, build trading bots, manage positions. Type-safe, auto-retry, AI-agent friendly.",
-  "keywords": [
-    "ctrader",
-    "ctrader-api",
-    "ctrader-open-api",
-    "ctrader-sdk",
-    "ctrader-typescript",
-    "ctrader-node",
-    "spotware",
-    "trading",
-    "trading-api",
-    "trading-bot",
-    "trading-library",
-    "forex",
-    "forex-trading",
-    "forex-api",
-    "cfd",
-    "cfd-trading",
-    "algorithmic-trading",
-    "automated-trading",
-    "algo-trading",
-    "quant",
-    "quantitative-trading",
-    "position-management",
-    "order-management",
-    "market-data",
-    "live-prices",
-    "websocket",
-    "protobuf",
-    "typescript",
-    "type-safe",
-    "ai-trading",
-    "ai-agent",
-    "agent-friendly",
-    "llm",
-    "cli"
-  ],
-  "homepage": "https://github.com/thecommandcat/ctrader-ts",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/thecommandcat/ctrader-ts"
-  },
-  "license": "MIT",
-  "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
-    }
-  },
-  "main": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
-  "files": [
-    "dist",
-    "assets",
-    "llms.txt",
-    "README.md",
-    "LICENSE"
-  ],
-  "bin": {
-    "ctrader-ts": "./dist/cli/index.js"
-  },
-  "scripts": {
-    "build": "tsc && cp -r src/proto dist/src/proto && chmod +x dist/cli/index.js dist/bin/auth.js",
-    "dev": "tsc --watch",
-    "test": "bun test",
-    "typecheck": "tsc --noEmit",
-    "lint": "bunx biome check src/ bin/ cli/",
-    "lint:fix": "bunx biome check --write src/ bin/ cli/",
-    "auth": "node dist/bin/auth.js",
-    "prepublishOnly": "bun run build"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.2",
-    "@types/bun": "latest",
-    "@types/node": "latest",
-    "protobufjs-cli": "^2.0.0",
-    "typescript": "^5.8.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "dependencies": {
-    "@clack/prompts": "^1.0.1",
-    "commander": "^14.0.3",
-    "protobufjs": "^8.0.0"
-  }
+	"name": "ctrader-ts",
+	"version": "1.0.0",
+	"description": "TypeScript client for the cTrader Open API — trade forex/CFDs, build trading bots, manage positions. Type-safe, auto-retry, AI-agent friendly.",
+	"keywords": [
+		"ctrader",
+		"ctrader-api",
+		"ctrader-open-api",
+		"ctrader-sdk",
+		"ctrader-typescript",
+		"ctrader-node",
+		"spotware",
+		"trading",
+		"trading-api",
+		"trading-bot",
+		"trading-library",
+		"forex",
+		"forex-trading",
+		"forex-api",
+		"cfd",
+		"cfd-trading",
+		"algorithmic-trading",
+		"automated-trading",
+		"algo-trading",
+		"quant",
+		"quantitative-trading",
+		"position-management",
+		"order-management",
+		"market-data",
+		"live-prices",
+		"websocket",
+		"protobuf",
+		"typescript",
+		"type-safe",
+		"ai-trading",
+		"ai-agent",
+		"agent-friendly",
+		"llm",
+		"cli"
+	],
+	"homepage": "https://github.com/thecommandcat/ctrader-ts",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/thecommandcat/ctrader-ts"
+	},
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/src/index.d.ts",
+			"import": "./dist/src/index.js"
+		}
+	},
+	"main": "./dist/src/index.js",
+	"types": "./dist/src/index.d.ts",
+	"files": [
+		"dist",
+		"assets",
+		"llms.txt",
+		"README.md",
+		"LICENSE"
+	],
+	"bin": {
+		"ctrader-ts": "./dist/cli/index.js"
+	},
+	"scripts": {
+		"build": "tsc && cp -r src/proto dist/src/proto && chmod +x dist/cli/index.js dist/bin/auth.js",
+		"dev": "tsc --watch",
+		"test": "bun test",
+		"typecheck": "tsc --noEmit",
+		"lint": "bunx biome check src/ bin/ cli/",
+		"lint:fix": "bunx biome check --write src/ bin/ cli/",
+		"auth": "node dist/bin/auth.js",
+		"prepublishOnly": "bun run build"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.2",
+		"@types/bun": "latest",
+		"@types/node": "latest",
+		"protobufjs-cli": "^2.0.0",
+		"typescript": "^5.8.0"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"dependencies": {
+		"@clack/prompts": "^1.0.1",
+		"commander": "^14.0.3",
+		"protobufjs": "^8.0.0"
+	}
 }

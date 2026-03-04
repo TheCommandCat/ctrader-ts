@@ -1,5 +1,11 @@
 import type { CTraderConnection } from "../connection.js";
-import { OrderTriggerMethod, OrderType, PayloadType, TimeInForce, TradeSide } from "../enums.js";
+import {
+	type OrderTriggerMethod,
+	OrderType,
+	PayloadType,
+	type TimeInForce,
+	type TradeSide,
+} from "../enums.js";
 import type { ExecutionEvent, OrderErrorEvent, TrailingSLChangedEvent } from "../types.js";
 
 /**
@@ -164,11 +170,13 @@ export class CTraderTrading {
 			ctidTraderAccountId: this.accountId,
 			positionId,
 		};
-		if (params.stopLoss !== undefined) payload["stopLoss"] = params.stopLoss;
-		if (params.takeProfit !== undefined) payload["takeProfit"] = params.takeProfit;
-		if (params.guaranteedStopLoss !== undefined) payload["guaranteedStopLoss"] = params.guaranteedStopLoss;
-		if (params.trailingStopLoss !== undefined) payload["trailingStopLoss"] = params.trailingStopLoss;
-		if (params.stopLossTriggerMethod !== undefined) payload["stopLossTriggerMethod"] = params.stopLossTriggerMethod;
+		if (params.stopLoss !== undefined) payload.stopLoss = params.stopLoss;
+		if (params.takeProfit !== undefined) payload.takeProfit = params.takeProfit;
+		if (params.guaranteedStopLoss !== undefined)
+			payload.guaranteedStopLoss = params.guaranteedStopLoss;
+		if (params.trailingStopLoss !== undefined) payload.trailingStopLoss = params.trailingStopLoss;
+		if (params.stopLossTriggerMethod !== undefined)
+			payload.stopLossTriggerMethod = params.stopLossTriggerMethod;
 		await this.connection.request(PayloadType.AMEND_POSITION_SLTP_REQ, payload);
 	}
 
@@ -180,18 +188,22 @@ export class CTraderTrading {
 			ctidTraderAccountId: this.accountId,
 			orderId,
 		};
-		if (params.volume !== undefined) payload["volume"] = params.volume;
-		if (params.limitPrice !== undefined) payload["limitPrice"] = params.limitPrice;
-		if (params.stopPrice !== undefined) payload["stopPrice"] = params.stopPrice;
-		if (params.expirationTimestamp !== undefined) payload["expirationTimestamp"] = params.expirationTimestamp;
-		if (params.stopLoss !== undefined) payload["stopLoss"] = params.stopLoss;
-		if (params.takeProfit !== undefined) payload["takeProfit"] = params.takeProfit;
-		if (params.slippageInPoints !== undefined) payload["slippageInPoints"] = params.slippageInPoints;
-		if (params.relativeStopLoss !== undefined) payload["relativeStopLoss"] = params.relativeStopLoss;
-		if (params.relativeTakeProfit !== undefined) payload["relativeTakeProfit"] = params.relativeTakeProfit;
-		if (params.guaranteedStopLoss !== undefined) payload["guaranteedStopLoss"] = params.guaranteedStopLoss;
-		if (params.trailingStopLoss !== undefined) payload["trailingStopLoss"] = params.trailingStopLoss;
-		if (params.stopTriggerMethod !== undefined) payload["stopTriggerMethod"] = params.stopTriggerMethod;
+		if (params.volume !== undefined) payload.volume = params.volume;
+		if (params.limitPrice !== undefined) payload.limitPrice = params.limitPrice;
+		if (params.stopPrice !== undefined) payload.stopPrice = params.stopPrice;
+		if (params.expirationTimestamp !== undefined)
+			payload.expirationTimestamp = params.expirationTimestamp;
+		if (params.stopLoss !== undefined) payload.stopLoss = params.stopLoss;
+		if (params.takeProfit !== undefined) payload.takeProfit = params.takeProfit;
+		if (params.slippageInPoints !== undefined) payload.slippageInPoints = params.slippageInPoints;
+		if (params.relativeStopLoss !== undefined) payload.relativeStopLoss = params.relativeStopLoss;
+		if (params.relativeTakeProfit !== undefined)
+			payload.relativeTakeProfit = params.relativeTakeProfit;
+		if (params.guaranteedStopLoss !== undefined)
+			payload.guaranteedStopLoss = params.guaranteedStopLoss;
+		if (params.trailingStopLoss !== undefined) payload.trailingStopLoss = params.trailingStopLoss;
+		if (params.stopTriggerMethod !== undefined)
+			payload.stopTriggerMethod = params.stopTriggerMethod;
 		await this.connection.request(PayloadType.AMEND_ORDER_REQ, payload);
 	}
 
@@ -232,7 +244,9 @@ export class CTraderTrading {
 		});
 	}
 
-	private async sendNewOrder(params: NewOrderParams & { orderType: OrderType }): Promise<ExecutionEvent> {
+	private async sendNewOrder(
+		params: NewOrderParams & { orderType: OrderType },
+	): Promise<ExecutionEvent> {
 		const payload: Record<string, unknown> = {
 			ctidTraderAccountId: this.accountId,
 			symbolId: params.symbolId,
@@ -240,23 +254,32 @@ export class CTraderTrading {
 			tradeSide: params.tradeSide,
 			volume: params.volume,
 		};
-		if ("limitPrice" in params && params.limitPrice !== undefined) payload["limitPrice"] = params.limitPrice;
-		if ("stopPrice" in params && params.stopPrice !== undefined) payload["stopPrice"] = params.stopPrice;
-		if ("baseSlippagePrice" in params && params.baseSlippagePrice !== undefined) payload["baseSlippagePrice"] = params.baseSlippagePrice;
-		if ("slippageInPoints" in params && params.slippageInPoints !== undefined) payload["slippageInPoints"] = params.slippageInPoints;
-		if ("timeInForce" in params && params.timeInForce !== undefined) payload["timeInForce"] = params.timeInForce;
-		if ("expirationTimestamp" in params && params.expirationTimestamp !== undefined) payload["expirationTimestamp"] = params.expirationTimestamp;
-		if (params.stopLoss !== undefined) payload["stopLoss"] = params.stopLoss;
-		if (params.takeProfit !== undefined) payload["takeProfit"] = params.takeProfit;
-		if (params.relativeStopLoss !== undefined) payload["relativeStopLoss"] = params.relativeStopLoss;
-		if (params.relativeTakeProfit !== undefined) payload["relativeTakeProfit"] = params.relativeTakeProfit;
-		if (params.guaranteedStopLoss !== undefined) payload["guaranteedStopLoss"] = params.guaranteedStopLoss;
-		if (params.trailingStopLoss !== undefined) payload["trailingStopLoss"] = params.trailingStopLoss;
-		if (params.stopTriggerMethod !== undefined) payload["stopTriggerMethod"] = params.stopTriggerMethod;
-		if (params.label !== undefined) payload["label"] = params.label;
-		if (params.comment !== undefined) payload["comment"] = params.comment;
-		if (params.clientOrderId !== undefined) payload["clientOrderId"] = params.clientOrderId;
-		if (params.positionId !== undefined) payload["positionId"] = params.positionId;
+		if ("limitPrice" in params && params.limitPrice !== undefined)
+			payload.limitPrice = params.limitPrice;
+		if ("stopPrice" in params && params.stopPrice !== undefined)
+			payload.stopPrice = params.stopPrice;
+		if ("baseSlippagePrice" in params && params.baseSlippagePrice !== undefined)
+			payload.baseSlippagePrice = params.baseSlippagePrice;
+		if ("slippageInPoints" in params && params.slippageInPoints !== undefined)
+			payload.slippageInPoints = params.slippageInPoints;
+		if ("timeInForce" in params && params.timeInForce !== undefined)
+			payload.timeInForce = params.timeInForce;
+		if ("expirationTimestamp" in params && params.expirationTimestamp !== undefined)
+			payload.expirationTimestamp = params.expirationTimestamp;
+		if (params.stopLoss !== undefined) payload.stopLoss = params.stopLoss;
+		if (params.takeProfit !== undefined) payload.takeProfit = params.takeProfit;
+		if (params.relativeStopLoss !== undefined) payload.relativeStopLoss = params.relativeStopLoss;
+		if (params.relativeTakeProfit !== undefined)
+			payload.relativeTakeProfit = params.relativeTakeProfit;
+		if (params.guaranteedStopLoss !== undefined)
+			payload.guaranteedStopLoss = params.guaranteedStopLoss;
+		if (params.trailingStopLoss !== undefined) payload.trailingStopLoss = params.trailingStopLoss;
+		if (params.stopTriggerMethod !== undefined)
+			payload.stopTriggerMethod = params.stopTriggerMethod;
+		if (params.label !== undefined) payload.label = params.label;
+		if (params.comment !== undefined) payload.comment = params.comment;
+		if (params.clientOrderId !== undefined) payload.clientOrderId = params.clientOrderId;
+		if (params.positionId !== undefined) payload.positionId = params.positionId;
 
 		const res = await this.connection.request(PayloadType.NEW_ORDER_REQ, payload);
 		return res as unknown as ExecutionEvent;

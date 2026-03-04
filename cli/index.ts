@@ -1,9 +1,14 @@
 #!/usr/bin/env node
 import { Command } from "commander";
+import type {
+	CTrader,
+	LimitOrderOptions,
+	MarketOrderOptions,
+	ModifyOptions,
+	StopOrderOptions,
+} from "../src/client.js";
 import { connect } from "../src/connect.js";
 import { TrendbarPeriod } from "../src/enums.js";
-import type { CTrader } from "../src/client.js";
-import type { MarketOrderOptions, LimitOrderOptions, StopOrderOptions, ModifyOptions } from "../src/client.js";
 import type { SlTpSpec } from "../src/types.js";
 
 let cachedClient: CTrader | null = null;
@@ -16,7 +21,7 @@ async function getClient(): Promise<CTrader> {
 }
 
 function dump(data: unknown): void {
-	process.stdout.write(JSON.stringify(data, null, 2) + "\n");
+	process.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
 }
 
 /**
@@ -73,11 +78,20 @@ function buildMarketOpts(opts: {
 }
 
 const periodMap: Record<string, TrendbarPeriod | undefined> = {
-	M1: TrendbarPeriod.M1, M2: TrendbarPeriod.M2, M3: TrendbarPeriod.M3,
-	M4: TrendbarPeriod.M4, M5: TrendbarPeriod.M5, M10: TrendbarPeriod.M10,
-	M15: TrendbarPeriod.M15, M30: TrendbarPeriod.M30, H1: TrendbarPeriod.H1,
-	H4: TrendbarPeriod.H4, H12: TrendbarPeriod.H12, D1: TrendbarPeriod.D1,
-	W1: TrendbarPeriod.W1, MN1: TrendbarPeriod.MN1,
+	M1: TrendbarPeriod.M1,
+	M2: TrendbarPeriod.M2,
+	M3: TrendbarPeriod.M3,
+	M4: TrendbarPeriod.M4,
+	M5: TrendbarPeriod.M5,
+	M10: TrendbarPeriod.M10,
+	M15: TrendbarPeriod.M15,
+	M30: TrendbarPeriod.M30,
+	H1: TrendbarPeriod.H1,
+	H4: TrendbarPeriod.H4,
+	H12: TrendbarPeriod.H12,
+	D1: TrendbarPeriod.D1,
+	W1: TrendbarPeriod.W1,
+	MN1: TrendbarPeriod.MN1,
 };
 
 const program = new Command();
@@ -94,7 +108,9 @@ program
 	.description("Run interactive OAuth setup (delegates to bin/auth.js)")
 	.action(async () => {
 		const { execFileSync } = await import("node:child_process");
-		execFileSync("node", [new URL("../bin/auth.js", import.meta.url).pathname], { stdio: "inherit" });
+		execFileSync("node", [new URL("../bin/auth.js", import.meta.url).pathname], {
+			stdio: "inherit",
+		});
 	});
 
 // ─── state ───────────────────────────────────────────────────────────────────
@@ -132,12 +148,18 @@ program
 	.option("--tp <spec>", "Take profit: 50 (pips), $25 (dollars), 2% (equity)")
 	.option("--label <label>", "Order label")
 	.option("--comment <comment>", "Order comment")
-	.action(async (symbol: string, lots: string, opts: { sl?: string; tp?: string; label?: string; comment?: string }) => {
-		const ct = await getClient();
-		const pos = await ct.buy(symbol, buildMarketOpts({ lots, ...opts }));
-		dump(pos);
-		ct.disconnect();
-	});
+	.action(
+		async (
+			symbol: string,
+			lots: string,
+			opts: { sl?: string; tp?: string; label?: string; comment?: string },
+		) => {
+			const ct = await getClient();
+			const pos = await ct.buy(symbol, buildMarketOpts({ lots, ...opts }));
+			dump(pos);
+			ct.disconnect();
+		},
+	);
 
 // ─── sell ────────────────────────────────────────────────────────────────────
 
@@ -150,12 +172,18 @@ program
 	.option("--tp <spec>", "Take profit")
 	.option("--label <label>", "Order label")
 	.option("--comment <comment>", "Order comment")
-	.action(async (symbol: string, lots: string, opts: { sl?: string; tp?: string; label?: string; comment?: string }) => {
-		const ct = await getClient();
-		const pos = await ct.sell(symbol, buildMarketOpts({ lots, ...opts }));
-		dump(pos);
-		ct.disconnect();
-	});
+	.action(
+		async (
+			symbol: string,
+			lots: string,
+			opts: { sl?: string; tp?: string; label?: string; comment?: string },
+		) => {
+			const ct = await getClient();
+			const pos = await ct.sell(symbol, buildMarketOpts({ lots, ...opts }));
+			dump(pos);
+			ct.disconnect();
+		},
+	);
 
 // ─── buy-limit ───────────────────────────────────────────────────────────────
 
@@ -169,15 +197,30 @@ program
 	.option("--tp <spec>", "Take profit")
 	.option("--label <label>", "Order label")
 	.option("--expires <ms>", "Expiry Unix ms timestamp")
-	.action(async (symbol: string, lots: string, limitPrice: string, opts: { sl?: string; tp?: string; label?: string; expires?: string }) => {
-		const ct = await getClient();
-		const base = buildMarketOpts({ lots, sl: opts.sl, tp: opts.tp, label: opts.label });
-		const orderOpts: LimitOrderOptions = { ...base, limitPrice: Number(limitPrice) };
-		if (opts.expires !== undefined) orderOpts.expirationTimestamp = Number(opts.expires);
-		const event = await ct.buyLimit(symbol, orderOpts);
-		dump(event);
-		ct.disconnect();
-	});
+	.action(
+		async (
+			symbol: string,
+			lots: string,
+			limitPrice: string,
+			opts: { sl?: string; tp?: string; label?: string; expires?: string },
+		) => {
+			const ct = await getClient();
+			const base = buildMarketOpts({
+				lots,
+				sl: opts.sl,
+				tp: opts.tp,
+				label: opts.label,
+			});
+			const orderOpts: LimitOrderOptions = {
+				...base,
+				limitPrice: Number(limitPrice),
+			};
+			if (opts.expires !== undefined) orderOpts.expirationTimestamp = Number(opts.expires);
+			const event = await ct.buyLimit(symbol, orderOpts);
+			dump(event);
+			ct.disconnect();
+		},
+	);
 
 // ─── sell-limit ──────────────────────────────────────────────────────────────
 
@@ -191,15 +234,30 @@ program
 	.option("--tp <spec>", "Take profit")
 	.option("--label <label>", "Order label")
 	.option("--expires <ms>", "Expiry Unix ms timestamp")
-	.action(async (symbol: string, lots: string, limitPrice: string, opts: { sl?: string; tp?: string; label?: string; expires?: string }) => {
-		const ct = await getClient();
-		const base = buildMarketOpts({ lots, sl: opts.sl, tp: opts.tp, label: opts.label });
-		const orderOpts: LimitOrderOptions = { ...base, limitPrice: Number(limitPrice) };
-		if (opts.expires !== undefined) orderOpts.expirationTimestamp = Number(opts.expires);
-		const event = await ct.sellLimit(symbol, orderOpts);
-		dump(event);
-		ct.disconnect();
-	});
+	.action(
+		async (
+			symbol: string,
+			lots: string,
+			limitPrice: string,
+			opts: { sl?: string; tp?: string; label?: string; expires?: string },
+		) => {
+			const ct = await getClient();
+			const base = buildMarketOpts({
+				lots,
+				sl: opts.sl,
+				tp: opts.tp,
+				label: opts.label,
+			});
+			const orderOpts: LimitOrderOptions = {
+				...base,
+				limitPrice: Number(limitPrice),
+			};
+			if (opts.expires !== undefined) orderOpts.expirationTimestamp = Number(opts.expires);
+			const event = await ct.sellLimit(symbol, orderOpts);
+			dump(event);
+			ct.disconnect();
+		},
+	);
 
 // ─── buy-stop ────────────────────────────────────────────────────────────────
 
@@ -213,15 +271,30 @@ program
 	.option("--tp <spec>", "Take profit")
 	.option("--label <label>", "Order label")
 	.option("--expires <ms>", "Expiry Unix ms timestamp")
-	.action(async (symbol: string, lots: string, stopPrice: string, opts: { sl?: string; tp?: string; label?: string; expires?: string }) => {
-		const ct = await getClient();
-		const base = buildMarketOpts({ lots, sl: opts.sl, tp: opts.tp, label: opts.label });
-		const orderOpts: StopOrderOptions = { ...base, stopPrice: Number(stopPrice) };
-		if (opts.expires !== undefined) orderOpts.expirationTimestamp = Number(opts.expires);
-		const event = await ct.buyStop(symbol, orderOpts);
-		dump(event);
-		ct.disconnect();
-	});
+	.action(
+		async (
+			symbol: string,
+			lots: string,
+			stopPrice: string,
+			opts: { sl?: string; tp?: string; label?: string; expires?: string },
+		) => {
+			const ct = await getClient();
+			const base = buildMarketOpts({
+				lots,
+				sl: opts.sl,
+				tp: opts.tp,
+				label: opts.label,
+			});
+			const orderOpts: StopOrderOptions = {
+				...base,
+				stopPrice: Number(stopPrice),
+			};
+			if (opts.expires !== undefined) orderOpts.expirationTimestamp = Number(opts.expires);
+			const event = await ct.buyStop(symbol, orderOpts);
+			dump(event);
+			ct.disconnect();
+		},
+	);
 
 // ─── sell-stop ───────────────────────────────────────────────────────────────
 
@@ -235,15 +308,30 @@ program
 	.option("--tp <spec>", "Take profit")
 	.option("--label <label>", "Order label")
 	.option("--expires <ms>", "Expiry Unix ms timestamp")
-	.action(async (symbol: string, lots: string, stopPrice: string, opts: { sl?: string; tp?: string; label?: string; expires?: string }) => {
-		const ct = await getClient();
-		const base = buildMarketOpts({ lots, sl: opts.sl, tp: opts.tp, label: opts.label });
-		const orderOpts: StopOrderOptions = { ...base, stopPrice: Number(stopPrice) };
-		if (opts.expires !== undefined) orderOpts.expirationTimestamp = Number(opts.expires);
-		const event = await ct.sellStop(symbol, orderOpts);
-		dump(event);
-		ct.disconnect();
-	});
+	.action(
+		async (
+			symbol: string,
+			lots: string,
+			stopPrice: string,
+			opts: { sl?: string; tp?: string; label?: string; expires?: string },
+		) => {
+			const ct = await getClient();
+			const base = buildMarketOpts({
+				lots,
+				sl: opts.sl,
+				tp: opts.tp,
+				label: opts.label,
+			});
+			const orderOpts: StopOrderOptions = {
+				...base,
+				stopPrice: Number(stopPrice),
+			};
+			if (opts.expires !== undefined) orderOpts.expirationTimestamp = Number(opts.expires);
+			const event = await ct.sellStop(symbol, orderOpts);
+			dump(event);
+			ct.disconnect();
+		},
+	);
 
 // ─── close ───────────────────────────────────────────────────────────────────
 
@@ -314,7 +402,11 @@ program
 		const ct = await getClient();
 		const event = await ct.resize(Number(positionId), Number(newLots));
 		if (event === undefined) {
-			dump({ resized: Number(positionId), change: "none", message: "Position already at target size" });
+			dump({
+				resized: Number(positionId),
+				change: "none",
+				message: "Position already at target size",
+			});
 		} else {
 			dump({ resized: Number(positionId), newLots: Number(newLots), event });
 		}
@@ -344,9 +436,9 @@ program
 	.action(async (opts: { from?: string; to?: string; max?: string }) => {
 		const ct = await getClient();
 		const dealOpts: Record<string, number> = {};
-		if (opts.from !== undefined) dealOpts["from"] = Number(opts.from);
-		if (opts.to !== undefined) dealOpts["to"] = Number(opts.to);
-		if (opts.max !== undefined) dealOpts["maxRows"] = Number(opts.max);
+		if (opts.from !== undefined) dealOpts.from = Number(opts.from);
+		if (opts.to !== undefined) dealOpts.to = Number(opts.to);
+		if (opts.max !== undefined) dealOpts.maxRows = Number(opts.max);
 		const result = await ct.getDeals(dealOpts);
 		dump(result);
 		ct.disconnect();
@@ -362,23 +454,38 @@ program
 	.argument("<from>", "Start Unix timestamp in ms")
 	.argument("<to>", "End Unix timestamp in ms")
 	.option("--count <n>", "Max number of bars")
-	.action(async (symbol: string, periodStr: string, from: string, to: string, opts: { count?: string }) => {
-		const period = periodMap[periodStr];
-		if (period === undefined) {
-			process.stderr.write(`Invalid period: ${periodStr}. Valid: M1 M2 M3 M4 M5 M10 M15 M30 H1 H4 H12 D1 W1 MN1\n`);
-			process.exit(1);
-		}
-		const ct = await getClient();
-		const params: { period: TrendbarPeriod; fromTimestamp: number; toTimestamp: number; count?: number } = {
-			period,
-			fromTimestamp: Number(from),
-			toTimestamp: Number(to),
-		};
-		if (opts.count !== undefined) params.count = Number(opts.count);
-		const result = await ct.getTrendbars(symbol, params);
-		dump(result);
-		ct.disconnect();
-	});
+	.action(
+		async (
+			symbol: string,
+			periodStr: string,
+			from: string,
+			to: string,
+			opts: { count?: string },
+		) => {
+			const period = periodMap[periodStr];
+			if (period === undefined) {
+				process.stderr.write(
+					`Invalid period: ${periodStr}. Valid: M1 M2 M3 M4 M5 M10 M15 M30 H1 H4 H12 D1 W1 MN1\n`,
+				);
+				process.exit(1);
+			}
+			const ct = await getClient();
+			const params: {
+				period: TrendbarPeriod;
+				fromTimestamp: number;
+				toTimestamp: number;
+				count?: number;
+			} = {
+				period,
+				fromTimestamp: Number(from),
+				toTimestamp: Number(to),
+			};
+			if (opts.count !== undefined) params.count = Number(opts.count);
+			const result = await ct.getTrendbars(symbol, params);
+			dump(result);
+			ct.disconnect();
+		},
+	);
 
 // ─── watch ───────────────────────────────────────────────────────────────────
 
@@ -393,8 +500,10 @@ program
 				price.symbol,
 				price.bidDecimal !== undefined ? `bid=${price.bidDecimal}` : "",
 				price.askDecimal !== undefined ? `ask=${price.askDecimal}` : "",
-			].filter(Boolean).join("  ");
-			process.stdout.write(line + "\n");
+			]
+				.filter(Boolean)
+				.join("  ");
+			process.stdout.write(`${line}\n`);
 		});
 
 		const cleanup = async (): Promise<void> => {
@@ -403,12 +512,14 @@ program
 			process.exit(0);
 		};
 
-		process.on("SIGINT", () => { void cleanup(); });
-		process.on("SIGTERM", () => { void cleanup(); });
+		process.on("SIGINT", () => {
+			void cleanup();
+		});
+		process.on("SIGTERM", () => {
+			void cleanup();
+		});
 	});
 // ─── symbols ────────────────────────────────────────────────────────────────
-
-
 
 program
 
@@ -419,17 +530,13 @@ program
 	.option("--json", "Output as JSON")
 
 	.action(async (opts: { json?: boolean }) => {
-
 		const ct = await getClient();
 
 		const symbols = await ct.getSymbols();
 
 		if (opts.json) {
-
 			dump(symbols);
-
 		} else {
-
 			// Table format with columns: symbolId, symbolName
 
 			const rows: string[][] = symbols.map((s) => [String(s.symbolId), s.symbolName || ""]);
@@ -437,39 +544,34 @@ program
 			const header = ["Symbol ID", "Symbol Name"];
 
 			const colWidths = [
-				Math.max(header[0]?.length ?? 0, ...(rows.length > 0 ? rows.map((r) => r[0]?.length ?? 0) : [1])),
-				Math.max(header[1]?.length ?? 0, ...(rows.length > 0 ? rows.map((r) => r[1]?.length ?? 0) : [1])),
+				Math.max(
+					header[0]?.length ?? 0,
+					...(rows.length > 0 ? rows.map((r) => r[0]?.length ?? 0) : [1]),
+				),
+				Math.max(
+					header[1]?.length ?? 0,
+					...(rows.length > 0 ? rows.map((r) => r[1]?.length ?? 0) : [1]),
+				),
 			];
 
-			const sep = (widths: number[]) =>
-
-				"  " + widths.map((w) => "-".repeat(w)).join("  ") + "\n";
+			const sep = (widths: number[]) => `  ${widths.map((w) => "-".repeat(w)).join("  ")}\n`;
 
 			const row = (cells: string[], widths: number[]) =>
-
-				"  " + cells.map((c, i) => String(c).padEnd(widths[i] ?? 0)).join("  ") + "\n";
+				`  ${cells.map((c, i) => String(c).padEnd(widths[i] ?? 0)).join("  ")}\n`;
 
 			process.stdout.write(row(header, colWidths));
 
 			process.stdout.write(sep(colWidths));
 
 			for (const r of rows) {
-
 				process.stdout.write(row(r, colWidths));
-
 			}
-
 		}
 
 		ct.disconnect();
-
 	});
 
-
-
 // ─── symbol-info ────────────────────────────────────────────────────────────
-
-
 
 program
 
@@ -482,29 +584,23 @@ program
 	.option("--json", "Output as JSON")
 
 	.action(async (symbol: string, opts: { json?: boolean }) => {
-
 		const ct = await getClient();
 
 		const details = await ct.getSymbolDetails([symbol]);
 
 		if (details.length === 0) {
-
 			process.stderr.write(`Symbol not found: ${symbol}\n`);
 
 			ct.disconnect();
 
 			process.exit(1);
-
 		}
 
 		const info = details[0]!;
 
 		if (opts.json) {
-
 			dump(info);
-
 		} else {
-
 			// Formatted key-value output
 
 			const fields: [string, string][] = [
@@ -519,29 +615,20 @@ program
 			];
 
 			if (info.schedule !== undefined && info.schedule.length > 0) {
-
-				fields.push(["Trading Hours", info.schedule.length + " schedule(s)"]);
-
+				fields.push(["Trading Hours", `${info.schedule.length} schedule(s)`]);
 			}
 
 			const maxKeyLen = Math.max(...fields.map((f) => f[0].length));
 
 			for (const [key, val] of fields) {
-
 				process.stdout.write(`${key.padEnd(maxKeyLen)}  ${String(val)}\n`);
-
 			}
-
 		}
 
 		ct.disconnect();
-
 	});
 
-
-
-
 program.parseAsync(process.argv).catch((err: unknown) => {
-	process.stderr.write(String(err) + "\n");
+	process.stderr.write(`${String(err)}\n`);
 	process.exit(1);
 });

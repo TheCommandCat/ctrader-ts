@@ -97,159 +97,159 @@ export enum PayloadType {
 
 /** Order type. Determines how the order is filled. */
 export enum OrderType {
-/** Instant fill at current market price. */
+	/** Instant fill at current market price. */
 	MARKET = 1,
-/** Fill at specified price or better. */
+	/** Fill at specified price or better. */
 	LIMIT = 2,
-/** Trigger market order when price reaches stop price. */
+	/** Trigger market order when price reaches stop price. */
 	STOP = 3,
-/** Protection order (SL/TP only, cannot open new position). */
+	/** Protection order (SL/TP only, cannot open new position). */
 	STOP_LOSS_TAKE_PROFIT = 4,
-/** Market order with maximum allowed slippage. */
+	/** Market order with maximum allowed slippage. */
 	MARKET_RANGE = 5,
-/** Stop order that becomes limit order when triggered. */
+	/** Stop order that becomes limit order when triggered. */
 	STOP_LIMIT = 6,
 }
 
 /** Trade direction. */
 export enum TradeSide {
-/** Long position (buy). */
+	/** Long position (buy). */
 	BUY = 1,
-/** Short position (sell). */
+	/** Short position (sell). */
 	SELL = 2,
 }
 
 /** Order expiration policy. */
 export enum TimeInForce {
-/** Expires at specified date/time. */
+	/** Expires at specified date/time. */
 	GOOD_TILL_DATE = 1,
-/** Stays active until manually cancelled. */
+	/** Stays active until manually cancelled. */
 	GOOD_TILL_CANCEL = 2,
-/** Fill what you can immediately, cancel the rest. */
+	/** Fill what you can immediately, cancel the rest. */
 	IMMEDIATE_OR_CANCEL = 3,
-/** Fill entirely or cancel. */
+	/** Fill entirely or cancel. */
 	FILL_OR_KILL = 4,
-/** Execute at market open. */
+	/** Execute at market open. */
 	MARKET_ON_OPEN = 5,
 }
 
 /** Describes what happened in an execution event. */
 export enum ExecutionType {
-/** Order accepted by server. */
+	/** Order accepted by server. */
 	ORDER_ACCEPTED = 2,
-/** Order fully filled. */
+	/** Order fully filled. */
 	ORDER_FILLED = 3,
-/** Order modified. */
+	/** Order modified. */
 	ORDER_REPLACED = 4,
-/** Order cancelled. */
+	/** Order cancelled. */
 	ORDER_CANCELLED = 5,
-/** Order expired. */
+	/** Order expired. */
 	ORDER_EXPIRED = 6,
-/** Order rejected. */
+	/** Order rejected. */
 	ORDER_REJECTED = 7,
-/** Cancel request rejected. */
+	/** Cancel request rejected. */
 	ORDER_CANCEL_REJECTED = 8,
-/** Overnight interest swap applied. */
+	/** Overnight interest swap applied. */
 	SWAP = 9,
-/** Balance deposit or withdrawal. */
+	/** Balance deposit or withdrawal. */
 	DEPOSIT_WITHDRAW = 10,
-/** Order partially filled. */
+	/** Order partially filled. */
 	ORDER_PARTIAL_FILL = 11,
-/** Bonus deposit or withdrawal. */
+	/** Bonus deposit or withdrawal. */
 	BONUS_DEPOSIT_WITHDRAW = 12,
 }
 
 /** Position lifecycle status. */
 export enum PositionStatus {
-/** Position is active. */
+	/** Position is active. */
 	OPEN = 1,
-/** Position is closed. */
+	/** Position is closed. */
 	CLOSED = 2,
-/** Position just created (transient state). */
+	/** Position just created (transient state). */
 	CREATED = 3,
-/** Position error. */
+	/** Position error. */
 	ERROR = 4,
 }
 
 /** Pending order status. */
 export enum OrderStatus {
-/** Order accepted. */
+	/** Order accepted. */
 	ACCEPTED = 1,
-/** Order filled. */
+	/** Order filled. */
 	FILLED = 2,
-/** Order rejected. */
+	/** Order rejected. */
 	REJECTED = 3,
-/** Order expired. */
+	/** Order expired. */
 	EXPIRED = 4,
-/** Order cancelled. */
+	/** Order cancelled. */
 	CANCELLED = 5,
 }
 
 /** Deal (trade execution) status. */
 export enum DealStatus {
-/** Deal fully filled. */
+	/** Deal fully filled. */
 	FILLED = 2,
-/** Deal partially filled. */
+	/** Deal partially filled. */
 	PARTIALLY_FILLED = 3,
-/** Deal rejected. */
+	/** Deal rejected. */
 	REJECTED = 4,
-/** Deal rejected internally. */
+	/** Deal rejected internally. */
 	INTERNALLY_REJECTED = 5,
-/** Deal error. */
+	/** Deal error. */
 	ERROR = 6,
-/** Deal missed. */
+	/** Deal missed. */
 	MISSED = 7,
 }
 
 /** Candlestick timeframe. M=minute, H=hour, D=day, W=week, MN=month. */
 export enum TrendbarPeriod {
-/** 1 minute. */
+	/** 1 minute. */
 	M1 = 1,
-/** 2 minutes. */
+	/** 2 minutes. */
 	M2 = 2,
-/** 3 minutes. */
+	/** 3 minutes. */
 	M3 = 3,
-/** 4 minutes. */
+	/** 4 minutes. */
 	M4 = 4,
-/** 5 minutes. */
+	/** 5 minutes. */
 	M5 = 5,
-/** 10 minutes. */
+	/** 10 minutes. */
 	M10 = 6,
-/** 15 minutes. */
+	/** 15 minutes. */
 	M15 = 7,
-/** 30 minutes. */
+	/** 30 minutes. */
 	M30 = 8,
-/** 1 hour. */
+	/** 1 hour. */
 	H1 = 9,
-/** 4 hours. */
+	/** 4 hours. */
 	H4 = 10,
-/** 12 hours. */
+	/** 12 hours. */
 	H12 = 11,
-/** 1 day. */
+	/** 1 day. */
 	D1 = 12,
-/** 1 week. */
+	/** 1 week. */
 	W1 = 13,
-/** 1 month. */
+	/** 1 month. */
 	MN1 = 14,
 }
 
 /** Quote type (bid or ask). */
 export enum QuoteType {
-/** Buy price (broker sells to you). */
+	/** Buy price (broker sells to you). */
 	BID = 1,
-/** Sell price (broker buys from you). */
+	/** Sell price (broker buys from you). */
 	ASK = 2,
 }
 
 /** How stop order trigger price is determined. */
 export enum OrderTriggerMethod {
-/** Trigger on last trade price. */
+	/** Trigger on last trade price. */
 	TRADE = 1,
-/** Trigger on opposite side quote. */
+	/** Trigger on opposite side quote. */
 	OPPOSITE = 2,
-/** Trigger on double trade price. */
+	/** Trigger on double trade price. */
 	DOUBLE_TRADE = 3,
-/** Trigger on double opposite quote. */
+	/** Trigger on double opposite quote. */
 	DOUBLE_OPPOSITE = 4,
 }
 
@@ -267,127 +267,127 @@ export enum DayOfWeek {
 
 /** How broker commissions are calculated. */
 export enum CommissionType {
-/** USD per million USD traded. */
+	/** USD per million USD traded. */
 	USD_PER_MILLION_USD = 1,
-/** USD per lot. */
+	/** USD per lot. */
 	USD_PER_LOT = 2,
-/** Percentage of trade value. */
+	/** Percentage of trade value. */
 	PERCENTAGE_OF_VALUE = 3,
-/** Quote currency per lot. */
+	/** Quote currency per lot. */
 	QUOTE_CCY_PER_LOT = 4,
 }
 
 /** How SL/TP distance is measured. */
 export enum SymbolDistanceType {
-/** Distance in points. */
+	/** Distance in points. */
 	SYMBOL_DISTANCE_IN_POINTS = 1,
-/** Distance as percentage. */
+	/** Distance as percentage. */
 	SYMBOL_DISTANCE_IN_PERCENTAGE = 2,
 }
 
 /** Currency for minimum commission. */
 export enum MinCommissionType {
-/** Base currency. */
+	/** Base currency. */
 	CURRENCY = 1,
-/** Quote currency. */
+	/** Quote currency. */
 	QUOTE_CURRENCY = 2,
 }
 
 /** Whether trading is enabled on symbol. */
 export enum TradingMode {
-/** Trading enabled. */
+	/** Trading enabled. */
 	ENABLED = 0,
-/** Trading disabled, pending orders not executed. */
+	/** Trading disabled, pending orders not executed. */
 	DISABLED_WITHOUT_PENDINGS_EXECUTION = 1,
-/** Trading disabled, pending orders executed. */
+	/** Trading disabled, pending orders executed. */
 	DISABLED_WITH_PENDINGS_EXECUTION = 2,
-/** Only closing trades allowed. */
+	/** Only closing trades allowed. */
 	CLOSE_ONLY_MODE = 3,
 }
 
 /** How overnight swap is calculated. */
 export enum SwapCalculationType {
-/** Swap in pips. */
+	/** Swap in pips. */
 	PIPS = 0,
-/** Swap as percentage. */
+	/** Swap as percentage. */
 	PERCENTAGE = 1,
-/** Swap in points. */
+	/** Swap in points. */
 	POINTS = 2,
 }
 
 /** Account access level. */
 export enum AccessRights {
-/** Full trading access. */
+	/** Full trading access. */
 	FULL_ACCESS = 0,
-/** Can only close positions. */
+	/** Can only close positions. */
 	CLOSE_ONLY = 1,
-/** No trading allowed. */
+	/** No trading allowed. */
 	NO_TRADING = 2,
-/** Account disabled. */
+	/** Account disabled. */
 	NO_LOGIN = 3,
 }
 
 /** How total margin is calculated across positions. */
 export enum TotalMarginCalculationType {
-/** Use maximum of all positions. */
+	/** Use maximum of all positions. */
 	MAX = 0,
-/** Sum all positions. */
+	/** Sum all positions. */
 	SUM = 1,
-/** Net hedged positions. */
+	/** Net hedged positions. */
 	NET = 2,
 }
 
 /** Account hedging model. */
 export enum AccountType {
-/** Separate positions per direction. */
+	/** Separate positions per direction. */
 	HEDGED = 0,
-/** Positions offset each other. */
+	/** Positions offset each other. */
 	NETTED = 1,
-/** Spread betting account. */
+	/** Spread betting account. */
 	SPREAD_BETTING = 2,
 }
 
 /** How margin is calculated for limited risk accounts. */
 export enum LimitedRiskMarginCalculationStrategy {
-/** Use leverage. */
+	/** Use leverage. */
 	ACCORDING_TO_LEVERAGE = 0,
-/** Use guaranteed stop loss. */
+	/** Use guaranteed stop loss. */
 	ACCORDING_TO_GSL = 1,
-/** Use both GSL and leverage. */
+	/** Use both GSL and leverage. */
 	ACCORDING_TO_GSL_AND_LEVERAGE = 2,
 }
 
 /** Which positions close first on margin call. */
 export enum StopOutStrategy {
-/** Close highest margin positions first. */
+	/** Close highest margin positions first. */
 	MOST_MARGIN_USED_FIRST = 0,
-/** Close most losing positions first. */
+	/** Close most losing positions first. */
 	MOST_LOSING_FIRST = 1,
 }
 
 /** OAuth client permission scope. */
 export enum ClientPermissionScope {
-/** Read-only access. */
+	/** Read-only access. */
 	SCOPE_VIEW = 0,
-/** Trading access. */
+	/** Trading access. */
 	SCOPE_TRADE = 1,
 }
 
 /** Margin level warning notification thresholds. */
 export enum NotificationType {
-/** Margin level warning 1. */
+	/** Margin level warning 1. */
 	MARGIN_LEVEL_THRESHOLD_1 = 61,
-/** Margin level warning 2. */
+	/** Margin level warning 2. */
 	MARGIN_LEVEL_THRESHOLD_2 = 62,
-/** Margin level warning 3. */
+	/** Margin level warning 3. */
 	MARGIN_LEVEL_THRESHOLD_3 = 63,
 }
 
 /** Bonus deposit or withdrawal type. */
 export enum ChangeBonusType {
-/** Bonus added. */
+	/** Bonus added. */
 	BONUS_DEPOSIT = 0,
-/** Bonus removed. */
+	/** Bonus removed. */
 	BONUS_WITHDRAW = 1,
 }
 
@@ -432,114 +432,114 @@ export enum ChangeBalanceType {
 
 /** Low-level protocol errors. */
 export enum ProtoErrorCode {
-/** Unknown error. */
+	/** Unknown error. */
 	UNKNOWN_ERROR = 1,
-/** Message type not supported. */
+	/** Message type not supported. */
 	UNSUPPORTED_MESSAGE = 2,
-/** Request invalid. */
+	/** Request invalid. */
 	INVALID_REQUEST = 3,
-/** Request timed out. */
+	/** Request timed out. */
 	TIMEOUT_ERROR = 5,
-/** Entity not found. */
+	/** Entity not found. */
 	ENTITY_NOT_FOUND = 6,
-/** Cannot route request. */
+	/** Cannot route request. */
 	CANT_ROUTE_REQUEST = 7,
-/** Message frame too long. */
+	/** Message frame too long. */
 	FRAME_TOO_LONG = 8,
-/** Market closed. */
+	/** Market closed. */
 	MARKET_CLOSED = 9,
-/** Concurrent modification. */
+	/** Concurrent modification. */
 	CONCURRENT_MODIFICATION = 10,
-/** Payload type blocked. */
+	/** Payload type blocked. */
 	BLOCKED_PAYLOAD_TYPE = 11,
 }
 
 /** cTrader Open API specific error codes. */
 export enum ProtoOAErrorCode {
-/** Access token expired. */
+	/** Access token expired. */
 	OA_AUTH_TOKEN_EXPIRED = 1,
-/** Account not authorized. */
+	/** Account not authorized. */
 	ACCOUNT_NOT_AUTHORIZED = 2,
-/** Login not found. */
+	/** Login not found. */
 	RET_NO_SUCH_LOGIN = 12,
-/** Already logged in. */
+	/** Already logged in. */
 	ALREADY_LOGGED_IN = 14,
-/** Account disabled. */
+	/** Account disabled. */
 	RET_ACCOUNT_DISABLED = 64,
-/** Too many connections. */
+	/** Too many connections. */
 	CONNECTIONS_LIMIT_EXCEEDED = 67,
-/** Cannot widen guaranteed stop loss. */
+	/** Cannot widen guaranteed stop loss. */
 	WORSE_GSL_NOT_ALLOWED = 68,
-/** Symbol on holiday. */
+	/** Symbol on holiday. */
 	SYMBOL_HAS_HOLIDAY = 69,
-/** Authentication failure. */
+	/** Authentication failure. */
 	CH_CLIENT_AUTH_FAILURE = 101,
-/** Client not authenticated. */
+	/** Client not authenticated. */
 	CH_CLIENT_NOT_AUTHENTICATED = 102,
-/** Client already authenticated. */
+	/** Client already authenticated. */
 	CH_CLIENT_ALREADY_AUTHENTICATED = 103,
-/** Access token invalid. */
+	/** Access token invalid. */
 	CH_ACCESS_TOKEN_INVALID = 104,
-/** Server not reachable. */
+	/** Server not reachable. */
 	CH_SERVER_NOT_REACHABLE = 105,
-/** cTrader account not found. */
+	/** cTrader account not found. */
 	CH_CTID_TRADER_ACCOUNT_NOT_FOUND = 106,
-/** Open API client not found. */
+	/** Open API client not found. */
 	CH_OA_CLIENT_NOT_FOUND = 107,
-/** Request rate limit exceeded. */
+	/** Request rate limit exceeded. */
 	REQUEST_FREQUENCY_EXCEEDED = 108,
-/** Server under maintenance. */
+	/** Server under maintenance. */
 	SERVER_IS_UNDER_MAINTENANCE = 109,
-/** Channel blocked. */
+	/** Channel blocked. */
 	CHANNEL_IS_BLOCKED = 110,
-/** Not subscribed to spot prices. */
+	/** Not subscribed to spot prices. */
 	NOT_SUBSCRIBED_TO_SPOTS = 112,
-/** Already subscribed. */
+	/** Already subscribed. */
 	ALREADY_SUBSCRIBED = 113,
-/** Symbol not found. */
+	/** Symbol not found. */
 	SYMBOL_NOT_FOUND = 114,
-/** Unknown symbol. */
+	/** Unknown symbol. */
 	UNKNOWN_SYMBOL = 115,
-/** Incorrect boundaries. */
+	/** Incorrect boundaries. */
 	INCORRECT_BOUNDARIES = 35,
-/** No quotes available. */
+	/** No quotes available. */
 	NO_QUOTES = 117,
-/** Insufficient funds. */
+	/** Insufficient funds. */
 	NOT_ENOUGH_MONEY = 118,
-/** Maximum exposure reached. */
+	/** Maximum exposure reached. */
 	MAX_EXPOSURE_REACHED = 119,
-/** Position not found. */
+	/** Position not found. */
 	POSITION_NOT_FOUND = 120,
-/** Order not found. */
+	/** Order not found. */
 	ORDER_NOT_FOUND = 121,
-/** Position not open. */
+	/** Position not open. */
 	POSITION_NOT_OPEN = 122,
-/** Position locked. */
+	/** Position locked. */
 	POSITION_LOCKED = 123,
-/** Too many positions. */
+	/** Too many positions. */
 	TOO_MANY_POSITIONS = 124,
-/** Invalid volume. */
+	/** Invalid volume. */
 	TRADING_BAD_VOLUME = 125,
-/** Invalid stop loss or take profit. */
+	/** Invalid stop loss or take profit. */
 	TRADING_BAD_STOPS = 126,
-/** Invalid prices. */
+	/** Invalid prices. */
 	TRADING_BAD_PRICES = 127,
-/** Invalid stake. */
+	/** Invalid stake. */
 	TRADING_BAD_STAKE = 128,
-/** Stop loss or take profit too close to market. */
+	/** Stop loss or take profit too close to market. */
 	PROTECTION_IS_TOO_CLOSE_TO_MARKET = 129,
-/** Invalid expiration date. */
+	/** Invalid expiration date. */
 	TRADING_BAD_EXPIRATION_DATE = 130,
-/** Order pending execution. */
+	/** Order pending execution. */
 	PENDING_EXECUTION = 131,
-/** Trading disabled. */
+	/** Trading disabled. */
 	TRADING_DISABLED = 132,
-/** Trading not allowed. */
+	/** Trading not allowed. */
 	TRADING_NOT_ALLOWED = 133,
-/** Cannot cancel order. */
+	/** Cannot cancel order. */
 	UNABLE_TO_CANCEL_ORDER = 134,
-/** Cannot amend order. */
+	/** Cannot amend order. */
 	UNABLE_TO_AMEND_ORDER = 135,
-/** Short selling not allowed. */
+	/** Short selling not allowed. */
 	SHORT_SELLING_NOT_ALLOWED = 136,
 }

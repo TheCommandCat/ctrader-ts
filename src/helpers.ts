@@ -1,8 +1,7 @@
 import type { CTraderAccount } from "./modules/account.js";
 import type { CTraderMarket } from "./modules/market.js";
 import type { SymbolCache } from "./symbol-cache.js";
-import type { FullSymbol, SpotEvent } from "./types.js";
-import type { SlTpSpec } from "./types.js";
+import type { FullSymbol, SlTpSpec, SpotEvent } from "./types.js";
 
 export type { SlTpSpec };
 
@@ -24,7 +23,7 @@ interface ResolvedSlTp {
  * Formula: pips * 10^(5 - pipPosition)
  */
 export function pipsToRelative(pips: number, pipPosition = 4): number {
-	return Math.round(pips * Math.pow(10, 5 - pipPosition));
+	return Math.round(pips * 10 ** (5 - pipPosition));
 }
 
 /**
@@ -65,7 +64,7 @@ async function specToPips(
 	if ("pips" in spec) return spec.pips;
 
 	const sym = await cache.getSymbolDetails();
-	const pipSize = Math.pow(10, -sym.pipPosition);
+	const pipSize = 10 ** -sym.pipPosition;
 	const lotSize = sym.lotSize ?? 100_000;
 	const lots = volumeInUnits / 100_000;
 
@@ -102,15 +101,13 @@ class RequestCache {
 
 	getSymbolDetails(): Promise<FullSymbol> {
 		if (this.symbolPromise === null) {
-			this.symbolPromise = this.ctx.market
-				.getSymbolsById([this.ctx.symbolId])
-				.then((symbols) => {
-					const sym = symbols[0];
-					if (sym === undefined) {
-						throw new Error(`Symbol details not found for id ${this.ctx.symbolId}`);
-					}
-					return sym;
-				});
+			this.symbolPromise = this.ctx.market.getSymbolsById([this.ctx.symbolId]).then((symbols) => {
+				const sym = symbols[0];
+				if (sym === undefined) {
+					throw new Error(`Symbol details not found for id ${this.ctx.symbolId}`);
+				}
+				return sym;
+			});
 		}
 		return this.symbolPromise;
 	}
@@ -133,7 +130,9 @@ class RequestCache {
 		return new Promise<SpotEvent>((resolve, reject) => {
 			const timeout = setTimeout(() => {
 				unsub();
-				void this.ctx.market.unsubscribeSpots([this.ctx.symbolId]).catch(() => { /* fire-and-forget cleanup */ });
+				void this.ctx.market.unsubscribeSpots([this.ctx.symbolId]).catch(() => {
+					/* fire-and-forget cleanup */
+				});
 				reject(new Error(`Timed out waiting for spot price on symbol ${this.ctx.symbolId}`));
 			}, 10_000);
 
@@ -141,7 +140,9 @@ class RequestCache {
 				if (event.symbolId === this.ctx.symbolId) {
 					clearTimeout(timeout);
 					unsub();
-					void this.ctx.market.unsubscribeSpots([this.ctx.symbolId]).catch(() => { /* fire-and-forget cleanup */ });
+					void this.ctx.market.unsubscribeSpots([this.ctx.symbolId]).catch(() => {
+						/* fire-and-forget cleanup */
+					});
 					resolve(event);
 				}
 			});
