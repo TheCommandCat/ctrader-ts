@@ -28,8 +28,7 @@ export {
 	type StopOrderOptions,
 	type Symbol,
 	unitsToLots,
-} from "./client.js";
-export { type DecodedMessage, getMessageClass } from "./codec.js";
+} from "./core/client.js";
 export {
 	type CTraderConfig,
 	getConfigPath,
@@ -37,18 +36,46 @@ export {
 	type PartialConfig,
 	resolveConfig,
 	saveConfig,
-} from "./config.js";
+} from "./core/config.js";
 export {
 	type ConnectOptions,
 	connect,
 	DEMO_ENDPOINT,
 	LIVE_ENDPOINT,
-} from "./connect.js";
+} from "./core/connect.js";
 export {
 	type ConnectionEvent,
 	CTraderConnection,
 	type CTraderConnectionConfig,
-} from "./connection.js";
+} from "./core/connection.js";
+export {
+	CTraderError,
+	NotConnectedError,
+	RequestTimeoutError,
+} from "./core/errors.js";
+export {
+	CTraderAccount,
+	type DealListParams,
+	type OrderListParams,
+	type TimeRangeParams,
+} from "./modules/account.js";
+export { CTraderAuth } from "./modules/auth.js";
+export {
+	CTraderMarket,
+	type GetTickDataParams,
+	type GetTrendbarsParams,
+} from "./modules/market.js";
+export {
+	type AmendOrderParams,
+	type AmendSltpParams,
+	CTraderTrading,
+	type LimitOrderParams,
+	type MarketRangeOrderParams,
+	type NewOrderParams,
+	type StopLimitOrderParams,
+	type StopOrderParams,
+} from "./modules/trading.js";
+export { type DecodedMessage, getMessageClass } from "./protocol/codec.js";
 export {
 	AccessRights,
 	AccountType,
@@ -78,34 +105,7 @@ export {
 	TradeSide,
 	TradingMode,
 	TrendbarPeriod,
-} from "./enums.js";
-export {
-	CTraderError,
-	NotConnectedError,
-	RequestTimeoutError,
-} from "./errors.js";
-export {
-	CTraderAccount,
-	type DealListParams,
-	type OrderListParams,
-	type TimeRangeParams,
-} from "./modules/account.js";
-export { CTraderAuth } from "./modules/auth.js";
-export {
-	CTraderMarket,
-	type GetTickDataParams,
-	type GetTrendbarsParams,
-} from "./modules/market.js";
-export {
-	type AmendOrderParams,
-	type AmendSltpParams,
-	CTraderTrading,
-	type LimitOrderParams,
-	type MarketRangeOrderParams,
-	type NewOrderParams,
-	type StopLimitOrderParams,
-	type StopOrderParams,
-} from "./modules/trading.js";
+} from "./protocol/enums.js";
 export type {
 	AccountDisconnectEvent,
 	AccountState,
@@ -157,4 +157,4 @@ export type {
 	TrailingSLChangedEvent,
 	Trendbar,
 	WatchStateOptions,
-} from "./types.js";
+} from "./protocol/types.js";

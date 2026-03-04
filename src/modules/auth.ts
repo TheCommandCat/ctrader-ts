@@ -1,6 +1,6 @@
-import type { CTraderConnection } from "../connection.js";
-import { PayloadType } from "../enums.js";
-import type { CtidProfile, CtidTraderAccount, TokenPair } from "../types.js";
+import type { CTraderConnection } from "../core/connection.js";
+import { PayloadType } from "../protocol/enums.js";
+import type { CtidProfile, CtidTraderAccount, TokenPair } from "../protocol/types.js";
 
 /**
  * Authentication module — app auth, account auth, token management. Used internally by connect() and available via ct.raw.auth for manual auth flows.

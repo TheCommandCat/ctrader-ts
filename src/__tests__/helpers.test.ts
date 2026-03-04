@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { pipsToRelative } from "./helpers.js";
+import { pipsToRelative } from "../core/helpers.js";
 
 describe("pipsToRelative", () => {
 	test("converts pips with default pipPosition (4)", () => {

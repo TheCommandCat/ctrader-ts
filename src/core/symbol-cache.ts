@@ -1,5 +1,5 @@
-import type { CTraderMarket } from "./modules/market.js";
-import type { LightSymbol } from "./types.js";
+import type { CTraderMarket } from "../modules/market.js";
+import type { LightSymbol } from "../protocol/types.js";
 
 export class SymbolCache {
 	private readonly market: CTraderMarket;

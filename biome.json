@@ -6,7 +6,7 @@
 			"cli/**",
 			"bin/**",
 			"examples/**",
-			"!src/proto",
+			"!src/protocol/proto",
 			"!dist",
 			"!node_modules"
 		]

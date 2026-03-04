@@ -1,8 +1,20 @@
 import { describe, expect, mock, test } from "bun:test";
-import { CTrader, lotsToUnits, unitsToLots } from "./client.js";
-import type { CTraderConnection } from "./connection.js";
-import { ExecutionType, OrderStatus, OrderType, PositionStatus, TradeSide } from "./enums.js";
-import type { ExecutionEvent, Order, Position, PositionUnrealizedPnL, Trader } from "./types.js";
+import { CTrader, lotsToUnits, unitsToLots } from "../core/client.js";
+import type { CTraderConnection } from "../core/connection.js";
+import {
+	ExecutionType,
+	OrderStatus,
+	OrderType,
+	PositionStatus,
+	TradeSide,
+} from "../protocol/enums.js";
+import type {
+	ExecutionEvent,
+	Order,
+	Position,
+	PositionUnrealizedPnL,
+	Trader,
+} from "../protocol/types.js";
 
 // ── Pure function tests ──────────────────────────────────────────────────────
 

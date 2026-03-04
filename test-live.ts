@@ -7,9 +7,9 @@
  *   source /home/thecommandcat/Coding/trident/.env && bun run test-live.ts
  */
 
-import { API_PORT, DEMO_HOST } from "./src/config.js";
-import { CTraderConnection } from "./src/connection.js";
-import { PayloadType } from "./src/enums.js";
+import { API_PORT, DEMO_HOST } from "./src/core/config.js";
+import { CTraderConnection } from "./src/core/connection.js";
+import { PayloadType } from "./src/protocol/enums.js";
 import { CTraderAccount } from "./src/modules/account.js";
 import { CTraderAuth } from "./src/modules/auth.js";
 import { CTraderMarket } from "./src/modules/market.js";

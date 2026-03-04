@@ -1,12 +1,12 @@
-import type { CTraderConnection } from "../connection.js";
+import type { CTraderConnection } from "../core/connection.js";
 import {
 	type OrderTriggerMethod,
 	OrderType,
 	PayloadType,
 	type TimeInForce,
 	type TradeSide,
-} from "../enums.js";
-import type { ExecutionEvent, OrderErrorEvent, TrailingSLChangedEvent } from "../types.js";
+} from "../protocol/enums.js";
+import type { ExecutionEvent, OrderErrorEvent, TrailingSLChangedEvent } from "../protocol/types.js";
 
 /**
  * Parameters for creating a new order via the cTrader protocol. Volume is in protocol units (1 lot = 100,000).

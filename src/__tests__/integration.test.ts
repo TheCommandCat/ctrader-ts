@@ -8,10 +8,10 @@
  * They are sequential — each test depends on the previous.
  */
 import { describe, expect, test } from "bun:test";
-import { type CTrader, lotsToUnits } from "./client.js";
-import { connect } from "./connect.js";
-import { QuoteType, TradeSide, TrendbarPeriod } from "./enums.js";
-import type { FullSymbol, LightSymbol, Position } from "./types.js";
+import { type CTrader, lotsToUnits } from "../core/client.js";
+import { connect } from "../core/connect.js";
+import { QuoteType, TradeSide, TrendbarPeriod } from "../protocol/enums.js";
+import type { FullSymbol, LightSymbol, Position } from "../protocol/types.js";
 
 const SYMBOL = "EURUSD";
 const LOT_SIZE = 1.0; // 1 standard lot = 100,000 units (broker minimum for EURUSD)

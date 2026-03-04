@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import type { CTraderMarket } from "./modules/market.js";
-import { SymbolCache } from "./symbol-cache.js";
-import type { LightSymbol } from "./types.js";
+import { SymbolCache } from "../core/symbol-cache.js";
+import type { CTraderMarket } from "../modules/market.js";
+import type { LightSymbol } from "../protocol/types.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -1,13 +1,10 @@
-import { CTraderConnection, type CTraderConnectionConfig } from "./connection.js";
-import { PayloadType, TradeSide } from "./enums.js";
-import { resolveSlTp } from "./helpers.js";
-import { CTraderAccount } from "./modules/account.js";
-import { CTraderAuth } from "./modules/auth.js";
+import { CTraderAccount } from "../modules/account.js";
+import { CTraderAuth } from "../modules/auth.js";
 import {
 	CTraderMarket,
 	type GetTickDataParams,
 	type GetTrendbarsParams,
-} from "./modules/market.js";
+} from "../modules/market.js";
 import {
 	type AmendOrderParams,
 	type AmendSltpParams,
@@ -15,8 +12,8 @@ import {
 	type LimitOrderParams,
 	type StopLimitOrderParams,
 	type StopOrderParams,
-} from "./modules/trading.js";
-import { SymbolCache } from "./symbol-cache.js";
+} from "../modules/trading.js";
+import { PayloadType, TradeSide } from "../protocol/enums.js";
 import type {
 	AccountDisconnectEvent,
 	AccountState,
@@ -52,7 +49,10 @@ import type {
 	TrailingSLChangedEvent,
 	Trendbar,
 	WatchStateOptions,
-} from "./types.js";
+} from "../protocol/types.js";
+import { CTraderConnection, type CTraderConnectionConfig } from "./connection.js";
+import { resolveSlTp } from "./helpers.js";
+import { SymbolCache } from "./symbol-cache.js";
 
 export interface CTraderClientConfig {
 	/** Hostname — e.g. "demo.ctraderapi.com" or "live.ctraderapi.com" */

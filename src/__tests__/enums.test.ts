@@ -11,7 +11,7 @@ import {
 	TimeInForce,
 	TradeSide,
 	TrendbarPeriod,
-} from "./enums.js";
+} from "../protocol/enums.js";
 
 describe("PayloadType", () => {
 	test("protocol envelope types", () => {

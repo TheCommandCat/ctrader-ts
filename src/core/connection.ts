@@ -11,10 +11,15 @@
  */
 
 import * as tls from "node:tls";
-import { type DecodedMessage, decodeMessage, encodeHeartbeat, encodeMessage } from "./codec.js";
-import { PayloadType } from "./enums.js";
+import {
+	type DecodedMessage,
+	decodeMessage,
+	encodeHeartbeat,
+	encodeMessage,
+} from "../protocol/codec.js";
+import { PayloadType } from "../protocol/enums.js";
+import type { ConnectionState, OAErrorPayload } from "../protocol/types.js";
 import { CTraderError, NotConnectedError, RequestTimeoutError } from "./errors.js";
-import type { ConnectionState, OAErrorPayload } from "./types.js";
 
 const REQUEST_TIMEOUT_MS = 15_000;
 const HEARTBEAT_CHECK_MS = 1_000;

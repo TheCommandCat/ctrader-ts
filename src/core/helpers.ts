@@ -1,7 +1,7 @@
-import type { CTraderAccount } from "./modules/account.js";
-import type { CTraderMarket } from "./modules/market.js";
+import type { CTraderAccount } from "../modules/account.js";
+import type { CTraderMarket } from "../modules/market.js";
+import type { FullSymbol, SlTpSpec, SpotEvent } from "../protocol/types.js";
 import type { SymbolCache } from "./symbol-cache.js";
-import type { FullSymbol, SlTpSpec, SpotEvent } from "./types.js";
 
 export type { SlTpSpec };
 

@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { decodeMessage, encodeHeartbeat, encodeMessage, getMessageClass } from "./codec.js";
-import { PayloadType } from "./enums.js";
+import {
+	decodeMessage,
+	encodeHeartbeat,
+	encodeMessage,
+	getMessageClass,
+} from "../protocol/codec.js";
+import { PayloadType } from "../protocol/enums.js";
 
 describe("codec", () => {
 	describe("encodeMessage / decodeMessage roundtrip", () => {

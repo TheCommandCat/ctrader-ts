@@ -6,10 +6,10 @@ import type {
 	MarketOrderOptions,
 	ModifyOptions,
 	StopOrderOptions,
-} from "../src/client.js";
-import { connect } from "../src/connect.js";
-import { TrendbarPeriod } from "../src/enums.js";
-import type { SlTpSpec } from "../src/types.js";
+} from "../src/core/client.js";
+import { connect } from "../src/core/connect.js";
+import { TrendbarPeriod } from "../src/protocol/enums.js";
+import type { SlTpSpec } from "../src/protocol/types.js";
 
 let cachedClient: CTrader | null = null;
 

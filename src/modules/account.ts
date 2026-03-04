@@ -1,5 +1,5 @@
-import type { CTraderConnection } from "../connection.js";
-import { PayloadType } from "../enums.js";
+import type { CTraderConnection } from "../core/connection.js";
+import { PayloadType } from "../protocol/enums.js";
 import type {
 	Deal,
 	DealOffset,
@@ -14,7 +14,7 @@ import type {
 	PositionUnrealizedPnL,
 	Trader,
 	TraderUpdatedEvent,
-} from "../types.js";
+} from "../protocol/types.js";
 
 /**
  * Parameters for querying deal history

@@ -7,7 +7,7 @@ import {
 	LIVE_HOST,
 	loadStoredConfig,
 	resolveConfig,
-} from "./config.js";
+} from "../core/config.js";
 
 describe("hostForEnvironment", () => {
 	test('returns demo host for "demo"', () => {

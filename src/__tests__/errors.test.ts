@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { CTraderError, NotConnectedError, RequestTimeoutError } from "./errors.js";
+import { CTraderError, NotConnectedError, RequestTimeoutError } from "../core/errors.js";
 
 describe("CTraderError", () => {
 	test("formats message as [code] description", () => {

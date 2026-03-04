@@ -1,5 +1,5 @@
-import type { CTraderConnection } from "../connection.js";
-import { PayloadType, type QuoteType, TrendbarPeriod } from "../enums.js";
+import type { CTraderConnection } from "../core/connection.js";
+import { PayloadType, type QuoteType, TrendbarPeriod } from "../protocol/enums.js";
 import type {
 	ArchivedSymbol,
 	Asset,
@@ -12,7 +12,7 @@ import type {
 	SymbolChangedEvent,
 	TickData,
 	Trendbar,
-} from "../types.js";
+} from "../protocol/types.js";
 
 /**
  * Parameters for historical candlestick data request

@@ -6,8 +6,8 @@ import {
 	getConfigPath,
 	loadStoredConfig,
 	saveConfig,
-} from "../src/config.js";
-import { CTraderConnection } from "../src/connection.js";
+} from "../src/core/config.js";
+import { CTraderConnection } from "../src/core/connection.js";
 import { CTraderAuth } from "../src/modules/auth.js";
 
 const OAUTH_TOKEN_URL = "https://openapi.ctrader.com/apps/token";
