@@ -533,6 +533,10 @@ export class CTrader {
         pos.tradeData.tradeSide === TradeSide.BUY
           ? pos.price - distance
           : pos.price + distance;
+    } else if (pos.stopLoss !== undefined) {
+      // Preserve existing SL when not being modified — omitting it
+      // from the amend request would cause cTrader to clear it.
+      amendParams.stopLoss = pos.stopLoss;
     }
 
     if (sltp.relativeTakeProfit !== undefined && pos.price !== undefined) {
@@ -541,9 +545,51 @@ export class CTrader {
         pos.tradeData.tradeSide === TradeSide.BUY
           ? pos.price + distance
           : pos.price - distance;
+    } else if (pos.takeProfit !== undefined) {
+      // Preserve existing TP when not being modified — omitting it
+      // from the amend request would cause cTrader to clear it.
+      amendParams.takeProfit = pos.takeProfit;
     }
 
     await this.raw.trading.amendPositionSltp(positionId, amendParams);
+  }
+
+  /**
+   * Resize a position — change its volume to a new target in lots.
+   * If newLots > current: adds volume via a market order on the same position.
+   * If newLots < current: partially closes the difference.
+   * If equal: no-op.
+   * @param positionId - The cTrader position ID
+   * @param newLots - Desired total position size in lots (e.g. 0.05, 0.1, 1.0)
+   * @returns The execution event from the increase/decrease, or undefined if no-op
+   */
+  async resize(positionId: number, newLots: Lots): Promise<ExecutionEvent | undefined> {
+    if (newLots < 0) throw new Error("newLots must be >= 0. Use close() to fully close a position.");
+    if (newLots === 0) throw new Error("newLots must be > 0. Use close() to fully close a position.");
+
+    const { positions } = await this.raw.account.reconcile();
+    const pos = positions.find((p) => p.positionId === positionId);
+    if (pos === undefined) throw new Error(`Position ${positionId} not found`);
+
+    const currentUnits = pos.tradeData.volume;
+    const newUnits = lotsToUnits(newLots);
+
+    if (newUnits === currentUnits) return undefined;
+
+    if (newUnits > currentUnits) {
+      // Increase: send a market order with positionId to add volume
+      const deltaUnits = newUnits - currentUnits;
+      return this.raw.trading.marketOrder({
+        symbolId: pos.tradeData.symbolId,
+        tradeSide: pos.tradeData.tradeSide as TradeSide,
+        volume: deltaUnits,
+        positionId,
+      });
+    }
+
+    // Decrease: partial close for the difference
+    const deltaUnits = currentUnits - newUnits;
+    return this.raw.trading.closePosition(positionId, deltaUnits);
   }
 
   /**
@@ -762,6 +808,14 @@ export class CTrader {
 
   // ─── Convenience ────────────────────────────────────────────────────────
 
+  /**
+   * Stream live depth-of-market (order book) data. Returns an async unsubscribe function.
+   * @param symbolsOrIds - Symbol names or IDs to watch
+   * @param handler - Called on every depth update for subscribed symbols
+   * @example
+   * const stop = await client.watchDepth(["EURUSD"], (e) => console.log(e));
+   * // later: await stop();
+   */
   async watchDepth(
     symbolsOrIds: Symbol[],
     handler: (event: DepthEvent) => void,

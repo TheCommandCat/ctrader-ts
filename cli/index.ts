@@ -303,6 +303,23 @@ program
 		ct.disconnect();
 	});
 
+// ─── resize ─────────────────────────────────────────────────────────────────
+
+program
+	.command("resize")
+	.description("Resize a position — change its volume to a new target in lots")
+	.argument("<positionId>", "Position ID")
+	.argument("<newLots>", "Desired total position size in lots (e.g. 0.05, 0.1, 1.0)")
+	.action(async (positionId: string, newLots: string) => {
+		const ct = await getClient();
+		const event = await ct.resize(Number(positionId), Number(newLots));
+		if (event === undefined) {
+			dump({ resized: Number(positionId), change: "none", message: "Position already at target size" });
+		} else {
+			dump({ resized: Number(positionId), newLots: Number(newLots), event });
+		}
+		ct.disconnect();
+	});
 // ─── cancel ──────────────────────────────────────────────────────────────────
 
 program

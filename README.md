@@ -131,6 +131,10 @@ Positions use their real cTrader `positionId` — no invented ID system:
 // Move SL/TP at any time
 await ct.modify(p1.positionId, { sl: { pips: 30 }, tp: { dollars: 50 } });
 
+// Resize — change position volume to a new target
+await ct.resize(p1.positionId, 0.2);   // increase from 0.1 to 0.2 lots
+await ct.resize(p1.positionId, 0.05);  // decrease from 0.2 to 0.05 lots
+
 // Close — full or partial
 await ct.close(p1.positionId);
 await ct.close(p1.positionId, { lots: 0.02 });  // partial
@@ -235,6 +239,7 @@ ctrader-ts buy-stop   EURUSD 0.1 1.1050
 ctrader-ts close 12345678                           # full close
 ctrader-ts close 12345678 --lots 0.05               # partial
 ctrader-ts modify 12345678 --sl-pips 30 --tp-dollars 50
+ctrader-ts resize 12345678 0.2                      # resize to 0.2 lots
 ctrader-ts close-symbol EURUSD
 ctrader-ts close-all
 ctrader-ts cancel 87654321

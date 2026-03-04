@@ -9,7 +9,17 @@
     "spotware",
     "trading",
     "forex",
-    "websocket"
+    "websocket",
+    "trading-bot",
+    "algorithmic-trading",
+    "automated-trading",
+    "forex-trading",
+    "cfd",
+    "type-safe",
+    "agent-friendly",
+    "position-management",
+    "ai-trading",
+    "typescript-trading"
   ],
   "homepage": "https://github.com/thecommandcat/ctrader-ts",
   "repository": {
