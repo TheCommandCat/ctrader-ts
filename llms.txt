@@ -61,6 +61,7 @@ Most users only need `connect()` + `CTrader` methods. The `raw.*` modules are fo
 | `getDynamicLeverage(leverageId)` | `DynamicLeverage` | Dynamic leverage tiers |
 | `getMarginCalls()` | `MarginCall[]` | Margin call thresholds |
 | `updateMarginCall(marginCall)` | `void` | Update a margin call level |
+| `watchState(handler, opts?)` | `() => Promise<void>` | Stream live account state. Fires handler on every change (execution, balance, margin, spot). Returns unsubscribe fn. |
 
 ### Trading
 
@@ -111,6 +112,23 @@ All return an unsubscribe function `() => void`.
 | `onClientDisconnect(handler)` | `ClientDisconnectEvent` | Server dropped connection |
 | `onTokenInvalidated(handler)` | `TokenInvalidatedEvent` | Access token invalidated |
 | `onAccountDisconnect(handler)` | `AccountDisconnectEvent` | Account disconnected by server |
+
+### Live Streaming
+
+```ts
+// watchState() — real-time account state, no polling
+const stop = await ct.watchState((state) => {
+  // state: LiveAccountState = AccountState + { reason, timestamp }
+  // reason: "init" | "execution" | "trader_updated" | "margin_changed" | "spot"
+  console.log(state.equity, state.unrealizedPnl, state.positions.length);
+});
+await stop(); // cleanup
+
+// Throttle spot-triggered updates (default 500ms)
+const stop2 = await ct.watchState(handler, { throttleMs: 1000 });
+```
+
+Combines EXECUTION_EVENT (position changes), TRADER_UPDATED_EVENT (balance), MARGIN_CHANGED_EVENT (margin), and SPOT_EVENT (live prices for PnL). All push-based, no polling.
 
 ### Connection
 

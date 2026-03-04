@@ -153,6 +153,8 @@ export type {
   TokenPair,
   SlTpSpec,
   AccountState,
+  LiveAccountState,
+  WatchStateOptions,
   GetDealsOptions,
   GetOrdersOptions,
 } from "./types.js";

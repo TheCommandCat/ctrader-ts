@@ -36,6 +36,7 @@ import type {
   GetDealsOptions,
   GetOrdersOptions,
   LightSymbol,
+  LiveAccountState,
   MarginCall,
   MarginCallEvent,
   MarginChangedEvent,
@@ -53,6 +54,7 @@ import type {
   TokenInvalidatedEvent,
   ClientDisconnectEvent,
   AccountDisconnectEvent,
+  WatchStateOptions,
 } from "./types.js";
 
 export interface CTraderClientConfig {
@@ -908,6 +910,168 @@ export class CTrader {
     return async () => {
       unsub();
       await this.raw.market.unsubscribeDepth(ids);
+    };
+  }
+
+  /**
+   * Stream live account state — balance, equity, margin, positions, and orders update in real-time.
+   * Listens to execution events, balance changes, margin updates, and spot prices to
+   * recompute a full AccountState snapshot on every change. No polling — pure push.
+   *
+   * Returns an async unsubscribe function that cleans up all listeners and spot subscriptions.
+   *
+   * @param handler - Called with the latest LiveAccountState on every state change
+   * @param options - Optional: throttleMs to limit spot-triggered updates (default 500ms)
+   *
+   * @example
+   * const stop = await ct.watchState((state) => {
+   *   console.log(`Equity: $${state.equity}, Positions: ${state.positions.length}`);
+   * });
+   * // later: await stop();
+   */
+  async watchState(
+    handler: (state: LiveAccountState) => void,
+    options: WatchStateOptions = {},
+  ): Promise<() => Promise<void>> {
+    const throttleMs = options.throttleMs ?? 500;
+
+    // --- Mutable state ---
+    let currentState: AccountState = await this.getState();
+    const spotPrices = new Map<number, { bid?: number; ask?: number }>();
+    let subscribedSymbolIds: number[] = [];
+    let destroyed = false;
+
+    // Emit initial state
+    handler({ ...currentState, reason: "init", timestamp: Date.now() });
+
+    // --- Helper: recompute equity from spot prices ---
+    const recomputeFromSpots = (): AccountState => {
+      const positions = currentState.positions;
+      let unrealizedPnl = 0;
+
+      for (const pos of positions) {
+        const spot = spotPrices.get(pos.tradeData.symbolId);
+        if (spot === undefined || pos.entryPrice === undefined) continue;
+
+        const isBuy = pos.tradeData.tradeSide === TradeSide.BUY;
+        const currentPrice = isBuy ? (spot.bid ?? spot.ask) : (spot.ask ?? spot.bid);
+        if (currentPrice === undefined) continue;
+
+        const priceDiff = isBuy
+          ? currentPrice - pos.entryPrice
+          : pos.entryPrice - currentPrice;
+        // Volume is in protocol units (100000 = 1 lot), price diff is in decimal
+        unrealizedPnl += priceDiff * pos.tradeData.volume;
+      }
+
+      const balance = currentState.balance;
+      const equity = balance + unrealizedPnl;
+      const usedMargin = currentState.usedMargin;
+      const freeMargin = equity - usedMargin;
+
+      const result: AccountState = {
+        ...currentState,
+        unrealizedPnl,
+        equity,
+        freeMargin,
+      };
+      if (usedMargin > 0) {
+        result.marginLevel = (equity / usedMargin) * 100;
+      }
+      return result;
+    };
+
+    // --- Helper: refresh full state from server ---
+    const refreshState = async (reason: LiveAccountState["reason"]): Promise<void> => {
+      if (destroyed) return;
+      currentState = await this.getState();
+      await syncSpotSubscriptions();
+      handler({ ...currentState, reason, timestamp: Date.now() });
+    };
+
+    // --- Helper: subscribe to spots for all position symbols ---
+    const syncSpotSubscriptions = async (): Promise<void> => {
+      const neededIds = [...new Set(currentState.positions.map((p) => p.tradeData.symbolId))];
+      const toSubscribe = neededIds.filter((id) => !subscribedSymbolIds.includes(id));
+      const toUnsubscribe = subscribedSymbolIds.filter((id) => !neededIds.includes(id));
+
+      if (toUnsubscribe.length > 0) {
+        await this.raw.market.unsubscribeSpots(toUnsubscribe).catch(() => {});
+        for (const id of toUnsubscribe) spotPrices.delete(id);
+      }
+      if (toSubscribe.length > 0) {
+        await this.raw.market.subscribeSpots(toSubscribe);
+      }
+      subscribedSymbolIds = neededIds;
+    };
+
+    // Subscribe to spots for current positions
+    await syncSpotSubscriptions();
+
+    // --- Spot price handler (throttled) ---
+    let spotThrottleTimer: ReturnType<typeof setTimeout> | undefined;
+    const offSpot = this.raw.market.onSpot((event: SpotEvent) => {
+      if (destroyed) return;
+      if (!subscribedSymbolIds.includes(event.symbolId)) return;
+
+      const current = spotPrices.get(event.symbolId) ?? {};
+      if (event.bid !== undefined) current.bid = event.bid / 100_000;
+      if (event.ask !== undefined) current.ask = event.ask / 100_000;
+      spotPrices.set(event.symbolId, current);
+
+      if (throttleMs === 0) {
+        const updated = recomputeFromSpots();
+        handler({ ...updated, reason: "spot", timestamp: Date.now() });
+        return;
+      }
+      if (spotThrottleTimer === undefined) {
+        spotThrottleTimer = setTimeout(() => {
+          spotThrottleTimer = undefined;
+          if (destroyed) return;
+          const updated = recomputeFromSpots();
+          handler({ ...updated, reason: "spot", timestamp: Date.now() });
+        }, throttleMs);
+      }
+    });
+
+    // --- Execution events (position open/close/modify) ---
+    const offExecution = this.onExecution(() => {
+      void refreshState("execution");
+    });
+
+    // --- Balance/account changes ---
+    const offTrader = this.onTraderUpdated(() => {
+      void refreshState("trader_updated");
+    });
+
+    // --- Margin changes ---
+    const offMargin = this.onMarginChanged((event: MarginChangedEvent) => {
+      if (destroyed) return;
+      // Update margin in-place for the affected position
+      const pos = currentState.positions.find((p) => p.positionId === event.positionId);
+      if (pos !== undefined) {
+        pos.usedMargin = event.usedMargin;
+        const usedMargin = currentState.positions.reduce(
+          (sum, p) => sum + (p.usedMargin ?? 0),
+          0,
+        ) / Math.pow(10, currentState.moneyDigits);
+        currentState = { ...currentState, usedMargin };
+      }
+      const updated = recomputeFromSpots();
+      handler({ ...updated, reason: "margin_changed", timestamp: Date.now() });
+    });
+
+    // --- Cleanup function ---
+    return async () => {
+      destroyed = true;
+      if (spotThrottleTimer !== undefined) clearTimeout(spotThrottleTimer);
+      offSpot();
+      offExecution();
+      offTrader();
+      offMargin();
+      if (subscribedSymbolIds.length > 0) {
+        await this.raw.market.unsubscribeSpots(subscribedSymbolIds).catch(() => {});
+      }
     };
   }
 

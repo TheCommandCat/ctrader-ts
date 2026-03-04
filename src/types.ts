@@ -596,3 +596,29 @@ export interface GetOrdersOptions {
   /** End timestamp in ms (defaults to now) */
   to?: number;
 }
+
+/**
+ * Live account state snapshot — same as AccountState but with a change reason and timestamp.
+ * Emitted by watchState() on every state-changing event (execution, balance change, spot tick).
+ */
+export interface LiveAccountState extends AccountState {
+  /** What triggered this state update */
+  reason:
+    | "init"
+    | "execution"
+    | "trader_updated"
+    | "margin_changed"
+    | "spot";
+  /** Unix timestamp in ms when this snapshot was computed */
+  timestamp: number;
+}
+
+/** Options for watchState() streaming */
+export interface WatchStateOptions {
+  /**
+   * Throttle interval in ms for spot-triggered updates.
+   * Spot ticks arrive very frequently — this prevents recomputing state on every tick.
+   * Default: 500ms. Set to 0 to disable throttling.
+   */
+  throttleMs?: number;
+}

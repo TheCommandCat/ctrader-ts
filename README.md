@@ -45,6 +45,7 @@ await ct.close(pos.positionId);
 - **Actionable errors** — error messages tell you exactly what went wrong and how to fix it
 - **AI-agent ready** — designed for LLM agents to understand and use without documentation lookup
 - **CLI included** — every operation available from the terminal with `--json` output
+- **Live streaming** — `watchState()` pushes real-time balance, equity, and position updates. No polling.
 
 ---
 
@@ -132,6 +133,36 @@ const { orders: orderHistory } = await ct.getOrders({ from: Date.now() - 8640000
 // Margin estimation before trading
 const { margins } = await ct.getExpectedMargin("EURUSD", [0.1, 0.5, 1.0]);
 ```
+
+### Live Account Streaming
+
+Stream real-time account state — no polling. Balance, equity, positions, and margin update automatically:
+
+```ts
+// Watch account state in real-time — handler fires on every change
+const stop = await ct.watchState((state) => {
+  console.log(`Equity: ${state.equity}, P&L: ${state.unrealizedPnl}`);
+  console.log(`Reason: ${state.reason}`);
+  // reason: "init" | "execution" | "trader_updated" | "margin_changed" | "spot"
+  for (const pos of state.positions) {
+    console.log(`  ${pos.volumeInLots} lots, entry: ${pos.entryPrice}`);
+  }
+});
+
+// Throttle spot updates (default 500ms) to control update frequency
+const stop2 = await ct.watchState(handler, { throttleMs: 1000 });
+
+// Stop watching
+await stop();
+```
+
+Under the hood, `watchState()` combines:
+- **Execution events** — position opens, closes, modifications
+- **Balance events** — deposits, withdrawals, swap charges
+- **Margin events** — margin requirement changes
+- **Spot prices** — live bid/ask for computing unrealized P&L and equity
+
+All push-based from the server. Zero polling.
 
 ### Trading
 
